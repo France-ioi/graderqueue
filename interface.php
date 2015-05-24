@@ -51,13 +51,26 @@ foreach($CFG_buttons as $bname => $bdata) {
 <div id="taskSendResult"></div>
 <?php
 echo "<h2>Servers</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>url_wakeup</b></td><td><b>type</b></td><td><b>simult_tasks</b></td><td><b>last_poll</b></td></tr>";
-$res = $db->query("SELECT * FROM `servers` ORDER BY id ASC;");
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>url_wakeup</b></td><td><b>type</b></td><td><b>tasks</b></td><td><b>last_poll</b></td></tr>";
+$res = $db->query("
+  SELECT servers.*,
+    server_types.name AS typename,
+    GROUP_CONCAT(tags.name SEPARATOR ',') AS tags,
+    COUNT(queue.id) AS nbtasks
+  FROM `servers`
+  LEFT JOIN type_tags ON type_tags.typeid=servers.type
+  LEFT JOIN tags ON type_tags.tagid=tags.id
+  LEFT JOIN server_types ON server_types.id=servers.type
+  LEFT JOIN queue ON queue.sent_to=servers.id
+  GROUP BY servers.id
+  ORDER BY servers.id ASC;");
 while($row = $res->fetch_assoc()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
-  if(time()-strtotime($row['last_poll']) > 5*60) {
+  if($row['nbtasks'] > 0) {
+    echo "<td><font color=\"darkorange\">busy (" . $row['nbtasks'] . " tasks)</font></td>";
+  } elseif(time()-strtotime($row['last_poll']) > 60) {
     echo "<td><font color=\"darkblue\">sleeping <i>(" . deltatime($row['last_poll'], 'now') . ")</i></font></td>";
   } else {
     echo "<td><font color=\"darkgreen\">polling</font></td>";
@@ -65,8 +78,8 @@ while($row = $res->fetch_assoc()) {
   echo "<td>" . $row['ssl_serial'] . "</td>";
   echo "<td>" . $row['ssl_dn'] . "</td>";
   echo "<td>" . $row['url_wakeup'] . "</td>";
-  echo "<td>" . $row['type'] . "</td>";
-  echo "<td>" . $row['simult_tasks'] . "</td>";
+  echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
+  echo "<td>" . $row['nbtasks'] . " / " . $row['simult_tasks'] . "</td>";
   echo "<td>" . $row['last_poll'] . "</td>";
   echo "</tr>";
 }
@@ -97,8 +110,9 @@ while($row = $res->fetch_assoc()) {
   # Summary
   $resultdata = json_decode($row['resultdata'], true);
   if($resultdata['errorcode'] > 0) {
+    echo "<a id=\"toggle" . $tid . "\" />";
     echo "<font color=\"darkred\">Error #" . $resultdata['errorcode'] . " received from server.</font><br />";
-    echo "<span class=\"tooltip\" id=\"toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</span><br />";
+    echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</a><br />";
     echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $resultdata['errormsg'] . "</pre>";
     $tid += 1;
   } elseif(!isset($resultdata['taskdata'])) {
@@ -108,8 +122,9 @@ while($row = $res->fetch_assoc()) {
       echo "*&nbsp;Execution&nbsp;" . $execution['name'] . "&nbsp;:<br />";
       foreach($execution['testsReports'] as $report) {
         if(isset($report['checker'])) {
+          echo "<a id=\"toggle" . $tid . "\" />";
           echo "<font color=\"darkgreen\">Solution executed successfully.</font><br />";
-          echo "<span class=\"tooltip\" id=\"toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle checker report</span><br />";
+          echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle checker report</a><br />";
           echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $report['checker']['stdout']['data'] . "</pre>";
           $tid += 1;
         } elseif(isset($report['execution'])) {
@@ -129,7 +144,14 @@ while($row = $res->fetch_assoc()) {
 echo "</table>";
 echo "<h2>Tasks</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>taskdata</b></td></tr>";
-$res = $db->query("SELECT * FROM `queue` ORDER BY priority DESC, received_time ASC;");
+$res = $db->query("
+  SELECT queue.*,
+         GROUP_CONCAT(server_types.name SEPARATOR ',') AS types
+  FROM `queue`
+  LEFT JOIN task_types ON task_types.taskid=queue.id
+  LEFT JOIN server_types ON server_types.id=task_types.typeid
+  GROUP BY queue.id
+  ORDER BY priority DESC, received_time ASC;");
 while($row = $res->fetch_assoc()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
@@ -147,7 +169,7 @@ while($row = $res->fetch_assoc()) {
   if($row['sent_to'] > 0) {
     echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
   } else {
-    echo "Not sent yet</td>";
+    echo "<span class=\"tooltip\" title=\"Can be sent to server types " . $row['types'] . "\">Not sent yet</span></td>";
   }
   echo "<td>Received&nbsp;:&nbsp;" . $row['received_time'];
   if($row['sent_to'] > 0) {
