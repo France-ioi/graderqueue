@@ -20,10 +20,12 @@ $tid = 0;
   </style>
 </head>
 <body>
+<a name="form" />
 <h2>Send task</h2>
 <div>
-<form enctype="multipart/form-data" action="interfacesend.php" id="taskSend">
-Solution : <input type="file" name="solfile" /> <i>or</i> solution path : <input type="text" name="solpath" /><br />
+<form enctype="multipart/form-data" action="api.php" id="taskSend">
+Solution : <input type="file" name="solfile" /> <i>or</i> path <input type="text" name="solpath" /> <i>or</i> <a onclick="$('#solcontentarea').toggle();" href="#form">content</a><br />
+<span id="solcontentarea" style="display:none;"><textarea id="solcontent" name="solcontent"></textarea><br /></span>
 Task path : <input type="text" name="taskpath" size="150" value="$ROOT_PATH/FranceIOI/Contests/..." /><br />
 Memory limit (KB) : <input type="text" name="memlimit" value="131072" /><br />
 Time limit (ms) : <input type="text" name="timelimit" value="60000" /><br />
@@ -40,6 +42,7 @@ foreach($CFG_buttons as $bname => $bdata) {
   $bmergeddata = array_merge($CFG_defaultbutton, $bdata);
   echo " <button type=\"button\" onclick=\"sendPath(" . $bid . ")\">" . $bname . "</button>";
   $buttonsData .= "buttonsData[" . $bid . "] = {";
+  $buttonsData .= "request: \"sendsolution\",";
   foreach($bmergeddata as $idx => $val) {
     $buttonsData .= $idx . ": \"" . $val . "\",";
   }
@@ -137,7 +140,9 @@ while($row = $res->fetch_assoc()) {
   }
   echo "</td>";
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['taskdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
+  $tid += 1;
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['resultdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
+  $tid += 1;
   echo "</tr>";
 }
 
@@ -178,6 +183,7 @@ while($row = $res->fetch_assoc()) {
     echo "</td>";
   }
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['taskdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
+  $tid += 1;
   echo "</tr>";
 }
 
@@ -213,10 +219,12 @@ $( "#taskSend" ).submit(function( event ) {
     url = $form.attr( "action" );
 
   $( "#taskSendResult" ).empty().append("<img src=\"res/loading.gif\" />");
+  fdata = new FormData(this);
+  fdata.append("request", "sendsolution");
   $.ajax({
     url: url,
     type: 'POST',
-    data: new FormData( this ),
+    data: fdata,
     cache: false,
     processData: false,
     contentType: false,
@@ -225,14 +233,25 @@ $( "#taskSend" ).submit(function( event ) {
 });
 
 function sendPath( pathid ) {
-  $( "#taskSendResult" ).empty().append("<img src=\"res/loading.gif\" />");
-  $.ajax({
-    url: "interfacesend.php",
-    type: 'POST',
-    data: buttonsData[pathid],
-    cache: false,
-    success: function( data ) { $( "#taskSendResult" ).empty().append(data); }
-  });
+    $("#taskSend").find('input').val(function(idx, val) {
+      if(this.name in buttonsData[pathid]) {
+        return buttonsData[pathid][this.name];
+      } else {
+        return val;
+      }
+    });
+    $("#solcontent").val(function(idx, val) {
+      if(this.name in buttonsData[pathid]) {
+        if(buttonsData[pathid][this.name] != '') {
+          $("#solcontentarea").toggle(true);
+        } else {
+          $("#solcontentarea").toggle(false);
+        }
+        return buttonsData[pathid][this.name];
+      } else {
+        return val;
+      }
+    });
 };
 
 function prettyPrint(tid) {
