@@ -5,15 +5,16 @@
 
 require("config.inc.php");
 
-# TODO verifier l'auth SSL
-$server_tags = array();
-$server_id = 2;
-
-$servres = $db->query("SELECT * FROM `servers` WHERE id=" . $server_id . ";");
-
-if(!$servdata = $servres->fetch_assoc()) {
-  die(jsonerror(2, "Authentication failed."));
+if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS'
+    && $servdata = $db->query("SELECT * FROM servers
+        WHERE ssl_serial='" . $db->real_escape_string($_SERVER['SSL_CLIENT_M_SERIAL']) . "'
+        AND ssl_dn='" . $db->real_escape_string($_SERVER['SSL_CLIENT_I_DN']) . "'")->fetch_assoc()) {
+  $server_id = $servdata['id'];
+} else {
+  die(jsonerror(3, "No valid authentication provided."));
 }
+
+$server_tags = array();
 
 # Check the server isn't considered as busy
 if($servdata['simult_tasks'] > 0) {

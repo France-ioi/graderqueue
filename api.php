@@ -6,7 +6,24 @@
 
 require("config.inc.php");
 
-$received_from = -1;
+if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS'
+    && ($platdata = $db->query("SELECT * FROM platforms
+        WHERE ssl_serial='" . $db->real_escape_string($_SERVER['SSL_CLIENT_M_SERIAL']) . "'
+        AND ssl_dn='" . $db->real_escape_string($_SERVER['SSL_CLIENT_I_DN']) . "'")->fetch_assoc())) {
+  $received_from = $platdata['id'];
+} elseif(isset($_POST['token'])) {
+  if($db->query("SELECT * FROM `tokens` WHERE expires >= NOW() AND token='" . $db->real_escape_string($_POST['token']) . "';")->fetch_row()) {
+    $received_from = -1;
+    $platdata = array(
+        'restrict_paths' => '',
+        'force_tag' => -1);
+  } else {
+    die(jsonerror(3, "Invalid token, please refresh the interface to get a new one."));
+  }
+  $db->query("DELETE FROM `tokens` WHERE expires < NOW();");
+} else {
+  die(jsonerror(3, "No valid authentication provided."));
+}
 
 if(!isset($_POST['request'])) {
   die(jsonerror(2, "No request made."));
@@ -18,6 +35,11 @@ if(!isset($_POST['request'])) {
     # Client is sending task JSON directly
     if(!isset($_POST['taskdata'])) {
       die(jsonerror(2, "taskdata missing from request."));
+    }
+    try {
+        $taskdata = json_decode($_POST['taskdata']);
+    } catch(Exception $e) {
+        die(jsonerror(2, "Error while decoding task JSON : " . $e->getMessage()));
     }
 
     if(isset($_POST['taskname'])) {
@@ -108,10 +130,15 @@ if(!isset($_POST['request'])) {
 
   # Convert tags to list of server types which can execute the task
   # We make slow requests to have meaningful error messages
+  $tagids = array();
+
+  if($platdata['force_tag'] != -1) {
+    $tagids[] = $platdata['force_tag'];
+  }
+
   if(isset($_POST['tags']) and $_POST['tags'] != '')
   {
     $tags = explode(',', $_POST['tags']);
-    $tagids = array();
 
     # Fetch each tag
     foreach($tags as $t) {
@@ -122,7 +149,9 @@ if(!isset($_POST['request'])) {
         die(jsonerror(2, "Tag `" . $t . "` unrecognized."));
       }
     }
+  }
 
+  if(count($tagids) > 0) {
     # Fetch all server types which can execute with these tags
     $typeids = array();
     $typeq = $db->query("SELECT typeid, COUNT(*) AS nb FROM type_tags WHERE tagid IN (" . implode(',', $tagids) . ") GROUP BY typeid HAVING nb=" . count($tagids) . ";");
@@ -133,14 +162,20 @@ if(!isset($_POST['request'])) {
       die(jsonerror(2, "No server type can execute tasks with tags " . $_POST['tags'] . "."));
     }
   }
+  $posttags = $_POST['tags'];
+
+  # Add path restrictions if needed
+  if($platdata['restrict_paths'] != '') {
+    $evaljson['restrictToPaths'] = $platdata['restrict_paths'];
+  }
 
   # Insert into queue
   $db->query("START TRANSACTION;");
 
   # Queue entry
-  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, taskdata) VALUES(?, ?, ?, NOW(), ?);");
+  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, taskdata) VALUES(?, ?, ?, NOW(), ?, ?);");
   $jsondata = json_encode($evaljson);
-  $stmt->bind_param("siis", $taskname, $priority, $received_from, $jsondata);
+  $stmt->bind_param("siiss", $taskname, $priority, $received_from, $posttags, $jsondata);
   $stmt->execute();
 
   $taskid = $stmt->insert_id;
@@ -155,6 +190,33 @@ if(!isset($_POST['request'])) {
   $db->query("COMMIT;");
 
   echo json_encode(array('errorcode' => 0, 'errormsg' => "Queued as task ID #" . $taskid . ".", 'taskid' => $taskid));
+  flush();
+
+  # Wake up a server if needed
+  $query = "
+    SELECT servers.*,
+      COUNT(queue.id) AS nbtasks
+    FROM `servers`
+    LEFT JOIN queue ON queue.sent_to=servers.id";
+  if(isset($typeids)) {
+    $query .= " WHERE type IN (" . implode(',', $typeids) . ")";
+  }
+  $query .= " GROUP BY servers.id
+    ORDER BY nbtasks DESC, last_poll DESC;";
+  $res = $db->query($query);
+  while($row = $res->fetch_assoc()) {
+    if(!($row['nbtasks'] < $row['simult_tasks'] or time()-strtotime($row['last_poll'] < 60)))
+    {
+      # Need to wake this server up
+      if(($fs = fsockopen($row['url_wakeup'])) !== FALSE)
+      {
+        fwrite($fs, ' ');
+        fclose($fs);
+        die();
+      }
+      # If failed we'll try the next server
+    }
+  }
 
 } elseif($_POST['request'] == "gettask") {
   # Read task information
@@ -166,9 +228,9 @@ if(!isset($_POST['request'])) {
     die(jsonerror(2, "Invalid taskid."));
   }
 
-  if($row = $db->query("SELECT * FROM queue WHERE id=" . $taskid . ";")->fetch_assoc()) {
+  if($row = $db->query("SELECT * FROM queue WHERE id=" . $taskid . " AND received_from=" . $received_from . ";")->fetch_assoc()) {
     echo json_encode(array('errorcode' => 0, 'errormsg' => 'Success', 'origin' => 'queue', 'data' => $row));
-  } elseif($row = $db->query("SELECT * FROM done WHERE id=" . $taskid . ";")->fetch_assoc()) {
+  } elseif($row = $db->query("SELECT * FROM done WHERE id=" . $taskid . " AND received_from=" . $received_from . ";")->fetch_assoc()) {
     echo json_encode(array('errorcode' => 0, 'errormsg' => 'Success', 'origin' => 'done', 'data' => $row));
   } else {
     echo jsonerror(2, "Invalid taskid.");

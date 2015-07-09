@@ -5,6 +5,11 @@
 
 require("config.inc.php");
 
+# Token for the API
+$token = md5(microtime());
+
+$db->query("INSERT INTO `tokens` VALUES('" . $token . "', NOW()+INTERVAL 10 MINUTE);");
+
 $tid = 0;
 ?>
 <html>
@@ -32,6 +37,7 @@ Time limit (ms) : <input type="text" name="timelimit" value="60000" /><br />
 Language : <input type="text" name="lang" value="c" /><br />
 Priority : <input type="text" name="priority" value="10" /><br />
 Tags : <input type="text" name="tags" value="" /><br />
+Token : <input type="text" name="token" value="<?=$token ?>" />
 <input type="submit" value="Submit" />
 </form></div>
 <div>Test tasks :

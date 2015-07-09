@@ -5,7 +5,14 @@
 
 require("config.inc.php");
 
-$server_id = 2;
+if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS'
+    && $servdata = $db->query("SELECT * FROM servers
+        WHERE ssl_serial='" . $db->real_escape_string($_SERVER['SSL_CLIENT_M_SERIAL']) . "'
+        AND ssl_dn='" . $db->real_escape_string($_SERVER['SSL_CLIENT_I_DN']) . "'")->fetch_assoc()) {
+  $server_id = $servdata['id'];
+} else {
+  die(jsonerror(3, "No valid authentication provided."));
+}
 
 if(isset($_POST['taskid'])) {
   $task_id = intval($_POST['taskid']);
@@ -25,8 +32,10 @@ if(!$row = $res->fetch_assoc()) {
 }
 
 if(isset($_POST['resultdata'])) {
-  if($db->query("INSERT INTO `done` (id, name, priority, tags, timeout, nb_fails, sent_to, sent_time, taskdata, done_time, resultdata)
-                 SELECT queue.id, queue.name, queue.priority, queue.tags, queue.timeout, queue.nb_fails, queue.sent_to, queue.sent_time, queue.taskdata, NOW(), '" . $db->escape_string($_POST['resultdata']) . "' FROM `queue` WHERE id=" . $task_id . ";")) {
+  if($db->query("INSERT INTO `done` (id, name, priority, timeout, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
+                 SELECT queue.id, queue.name, queue.priority, queue.timeout, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), '" . $db->escape_string($_POST['resultdata']) . "'
+                 FROM `queue`
+                 WHERE id=" . $task_id . ";")) {
     # Success!
     $db->query("DELETE FROM `queue` WHERE id=" . $task_id . ";");
     $db->query("UPDATE `servers` SET status='idle' WHERE id=" . $server_id . ";");
@@ -43,5 +52,4 @@ if(isset($_POST['resultdata'])) {
   echo jsonerror(2, "No resultdata received.");
 }
 $db->query("COMMIT;");
-
 ?>
