@@ -1,0 +1,20 @@
+<VirtualHost *:443>
+    ServerName www.example.com
+ 
+    DocumentRoot /path/to/www/
+    <Directory "/path/to/www/">
+        AllowOverride all
+    </Directory>
+ 
+    SSLEngine On
+    SSLCertificateFile /path/to/certs/graderqueueCA.pem
+    SSLCertificateKeyFile /path/to/certs/graderqueueCA.key
+ 
+    SSLCACertificateFile /path/to/certs/graderqueueCA.crt
+    SSLVerifyClient optional
+    SSLVerifyDepth 1
+    SSLOptions +StdEnvVars
+
+    CustomLog /var/log/apache2/access-graderqueue.log combined
+    ErrorLog /var/log/apache2/error-graderqueue.log
+</VirtualHost>
