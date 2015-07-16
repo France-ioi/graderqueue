@@ -6,12 +6,11 @@
 
 require("config.inc.php");
 
-if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS'
-    && ($platdata = $db->query("SELECT * FROM platforms
-        WHERE ssl_serial='" . $db->real_escape_string($_SERVER['SSL_CLIENT_M_SERIAL']) . "'
-        AND ssl_dn='" . $db->real_escape_string($_SERVER['SSL_CLIENT_I_DN']) . "'")->fetch_assoc())) {
+if($platdata = getclientinfo('platforms')) {
+  # Client was identified by a SSL client certificate
   $received_from = $platdata['id'];
 } elseif(isset($_POST['token'])) {
+  # API used through interface.php, check token for validity
   if($db->query("SELECT * FROM `tokens` WHERE expires >= NOW() AND token='" . $db->real_escape_string($_POST['token']) . "';")->fetch_row()) {
     $received_from = -1;
     $platdata = array(

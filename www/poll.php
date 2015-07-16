@@ -5,10 +5,8 @@
 
 require("config.inc.php");
 
-if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS'
-    && $servdata = $db->query("SELECT * FROM servers
-        WHERE ssl_serial='" . $db->real_escape_string($_SERVER['SSL_CLIENT_M_SERIAL']) . "'
-        AND ssl_dn='" . $db->real_escape_string($_SERVER['SSL_CLIENT_I_DN']) . "'")->fetch_assoc()) {
+if($servdata = getclientinfo('servers')) {
+  # Client was identified by a SSL client certificate
   $server_id = $servdata['id'];
 } else {
   die(jsonerror(3, "No valid authentication provided."));
