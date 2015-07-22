@@ -8,7 +8,8 @@ require("config.inc.php");
 # Token for the API
 $token = md5(microtime());
 
-$db->query("INSERT INTO `tokens` VALUES('" . $token . "', NOW()+INTERVAL 10 MINUTE);");
+$stmt = $db->prepare("INSERT INTO `tokens` VALUES(:token, NOW()+INTERVAL 10 MINUTE);");
+$stmt->execute(array(':token' => $token));
 
 $tid = 0;
 ?>
@@ -73,7 +74,7 @@ $res = $db->query("
   LEFT JOIN queue ON queue.sent_to=servers.id
   GROUP BY servers.id
   ORDER BY servers.id ASC;");
-while($row = $res->fetch_assoc()) {
+while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
@@ -98,7 +99,7 @@ echo "<h2>Tasks done</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>taskdata</b></td><td><b>resultdata</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC;");
-while($row = $res->fetch_assoc()) {
+while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
@@ -163,7 +164,7 @@ $res = $db->query("
   LEFT JOIN server_types ON server_types.id=task_types.typeid
   GROUP BY queue.id
   ORDER BY priority DESC, received_time ASC;");
-while($row = $res->fetch_assoc()) {
+while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
@@ -195,11 +196,12 @@ while($row = $res->fetch_assoc()) {
 
 echo "</table>";
 echo "<h2>Log</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>log_type</b></td><td><b>task_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
-$res = $db->query("SELECT * FROM `log` ORDER BY id DESC;");
-while($row = $res->fetch_assoc()) {
+echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>task_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
+$res = $db->query("SELECT * FROM `log` ORDER BY datetime DESC;");
+while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
+  echo "<td>" . $row['datetime'] . "</td>";
   echo "<td>" . $row['log_type'] . "</td>";
   echo "<td>" . $row['task_id'] . "</td>";
   echo "<td>" . $row['server_id'] . "</td>";

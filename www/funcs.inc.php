@@ -22,6 +22,13 @@ function jsonerror($code, $msg) {
   return json_encode(array('errormsg' => $msg, 'errorcode' => $code));
 }
 
+function db_log($log_type, $task_id, $server_id, $message) {
+  # Adds a log line to the database table 'log'
+  global $db;
+  $stmt = $db->prepare("INSERT INTO `log` (date, log_type, task_id, server_id, message) VALUES(:type, :taskid, :sid, :msg)");
+  return $stmt->execute(array(':type' => $log_type, ':taskid' => $task_id, ':sid' => $server_id, ':msg' => $message));
+}
+
 function getclientinfo($table) {
   # Returns the database row about a client identified by his SSL cert
   # table must be one of 'platforms' or 'servers'
@@ -35,15 +42,11 @@ function getclientinfo($table) {
 
   if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS') {
     # Client certificate valid, fetching information from the database
-    $serial = $_SERVER['SSL_CLIENT_M_SERIAL'];
-    $dn = $_SERVER['SSL_CLIENT_I_DN'];
-
-    $stmt = $db->prepare("SELECT * FROM $table WHERE ssl_serial=? AND ssl_dn=?");
-    $stmt->bind_param('ss', $serial, $dn);
-    $stmt->execute();
+    $stmt = $db->prepare("SELECT * FROM $table WHERE ssl_serial=:serial AND ssl_dn=:dn");
+    $stmt->execute(array(':serial' => $_SERVER['SSL_CLIENT_M_SERIAL'], ':dn' => $_SERVER['SSL_CLIENT_I_DN']));
 
     # If no row was found, returns NULL
-    return $stmt->get_result()->fetch_assoc();
+    return $stmt->fetch();
   } else {
     return NULL; # Client certificate was invalid or non-present
   }

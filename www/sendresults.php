@@ -19,35 +19,39 @@ if(isset($_POST['taskid'])) {
 }
 
 # Isolate as a transaction
-$db->query("START TRANSACTION;");
+$db->beginTransaction();
 
 # Check the server was sent this task
-$res = $db->query("SELECT * FROM `queue` WHERE status='sent' AND id=" . $task_id . " AND sent_to=" . $server_id . ";");
-if(!$row = $res->fetch_assoc()) {
-  $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('error_not_assigned', " . $task_id . "," . $server_id . ");");
-  $db->query("COMMIT;");
+$res = $db->prepare("SELECT * FROM `queue` WHERE status='sent' AND id=:taskid AND sent_to=:sid;");
+$res->execute(array(':taskid' => $task_id, ':sid' => $server_id));
+if(!$row = $res->fetch()) {
+  db_log('error_not_assigned', $task_id, $server_id, '');
+  $db->commit();
   die(jsonerror(2, "Task doesn't exist or server doesn't have this task assigned."));
 }
 
 if(isset($_POST['resultdata'])) {
-  if($db->query("INSERT INTO `done` (id, name, priority, timeout, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
-                 SELECT queue.id, queue.name, queue.priority, queue.timeout, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), '" . $db->escape_string($_POST['resultdata']) . "'
+  $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
+                 SELECT queue.id, queue.name, queue.priority, queue.timeout, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), :resultdata
                  FROM `queue`
-                 WHERE id=" . $task_id . ";")) {
+                 WHERE id=:taskid;");
+  if($stmt->execute(array(':resultdata' => $_POST['resultdata'], ':taskid' => $task_id))) {
     # Success!
-    $db->query("DELETE FROM `queue` WHERE id=" . $task_id . ";");
-    $db->query("UPDATE `servers` SET status='idle' WHERE id=" . $server_id . ";");
-    $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('notice_recv_resultdata', " . $task_id . "," . $server_id . ");");
+    $stmt = $db->prepare("DELETE FROM `queue` WHERE id=:taskid;");
+    $stmt->execute(array(':taskid' => $task_id));
+    $stmt = $db->prepare("UPDATE `servers` SET status='idle' WHERE id=:sid;");
+    db_log('notice_recv_resultdata', $task_id, $server_id, '');
     echo jsonerror(0, "Saved resultdata.");
   } else {
     # Error while saving results
-    $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('error_saving_resultdata', " . $task_id . "," . $server_id . ");");
+    db_log('error_saving_resultdata', $task_id, $server_id, '');
     echo jsonerror(2, "Error saving resultdata.");
   }
 } else {
   # No result data sent
+  db_log('error_no_resultdata', $task_id, $server_id, '');
   $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('error_no_resultdata', " . $task_id . "," . $server_id . ");");
   echo jsonerror(2, "No resultdata received.");
 }
-$db->query("COMMIT;");
+$db->commit();
 ?>

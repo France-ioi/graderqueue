@@ -42,8 +42,9 @@ $CFG_buttons = array(
 
 ### End of configuration
 
-$db = new mysqli($CFG_db_hostname, $CFG_db_user, $CFG_db_password, $CFG_db_database);
-if($db->connect_errno) {
-  die(jsonerror(2, "Failed to connect to database: (" . $db->connect_errno . ") " . $db->connect_error));
+try {
+  $db = new PDO('mysql:host=' . $CFG_db_hostname . ';dbname=' . $CFG_db_database, $CFG_db_user, $CFG_db_password);
+} catch(PDOException $e) {
+  die(jsonerror(2, "Failed to connect to database: " . $e->getMessage()));
 }
 ?>
