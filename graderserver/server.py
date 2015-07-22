@@ -12,7 +12,7 @@
 
 import argparse, json, os, requests, string, sys, subprocess, time
 import urllib, urllib2, urllib2_ssl
-from config import CFG_TASKGRADER, CFG_SERVER_PIDFILE, CFG_GRADERQUEUE_POLL, CFG_GRADERQUEUE_SEND, CFG_GRADERQUEUE_ROOT, CFG_GRADERQUEUE_VARS, CFG_SSL_KEY, CFG_SSL_CERT, CFG_SSL_CA, CFG_SSL_CHECKER
+from config import CFG_TASKGRADER, CFG_SERVER_PIDFILE, CFG_GRADERQUEUE_POLL, CFG_GRADERQUEUE_SEND, CFG_GRADERQUEUE_ROOT, CFG_GRADERQUEUE_VARS, CFG_SERVER_RESTRICT, CFG_SSL_KEY, CFG_SSL_CERT, CFG_SSL_CA, CFG_SSL_CHECKER
 
 
 if __name__ == '__main__':
@@ -125,6 +125,9 @@ if __name__ == '__main__':
         taskdata['rootPath'] = CFG_GRADERQUEUE_ROOT
         if taskdata.has_key('restrictToPaths'):
             taskdata['restrictToPaths'] = map(lambda p: Template(p).safe_substitute(CFG_GRADERQUEUE_VARS), taskdata['restrictToPaths'])
+            taskdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
+        elif CFG_SERVER_RESTRICT:
+            taskdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
         if args.debug:
             print ''

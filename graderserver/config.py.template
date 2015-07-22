@@ -20,6 +20,9 @@ CFG_GRADERQUEUE_SEND = '' # URL to send results
 CFG_GRADERQUEUE_ROOT = '' # rootPath to add to tasks
 CFG_GRADERQUEUE_VARS = {} # Values for variables from the graderqueue
 
+# Paths to restrict taskgrader access to
+CFG_SERVER_RESTRICT  = []
+
 # Server certificate validation files
 # CA to check the certificate against; use a list for multiple CAs
 CFG_GRADERQUEUE_CA = ''   # CA.crt
