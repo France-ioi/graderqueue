@@ -61,7 +61,7 @@ foreach($CFG_buttons as $bname => $bdata) {
 <div id="taskSendResult"></div>
 <?php
 echo "<h2>Servers</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>url_wakeup</b></td><td><b>type</b></td><td><b>tasks</b></td><td><b>last_poll</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>tasks</b></td><td><b>last_poll_time</b></td></tr>";
 $res = $db->query("
   SELECT servers.*,
     server_types.name AS typename,
@@ -80,23 +80,23 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['name'] . "</td>";
   if($row['nbtasks'] > 0) {
     echo "<td><font color=\"darkorange\">busy (" . $row['nbtasks'] . " tasks)</font></td>";
-  } elseif(time()-strtotime($row['last_poll']) > 60) {
-    echo "<td><font color=\"darkblue\">sleeping <i>(" . deltatime($row['last_poll'], 'now') . ")</i></font></td>";
+  } elseif(time()-strtotime($row['last_poll_time']) > 60) {
+    echo "<td><font color=\"darkblue\">sleeping <i>(" . deltatime($row['last_poll_time'], 'now') . ")</i></font></td>";
   } else {
     echo "<td><font color=\"darkgreen\">polling</font></td>";
   }
   echo "<td>" . $row['ssl_serial'] . "</td>";
   echo "<td>" . $row['ssl_dn'] . "</td>";
-  echo "<td>" . $row['url_wakeup'] . "</td>";
+  echo "<td>" . $row['wakeup_url'] . "</td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
-  echo "<td>" . $row['nbtasks'] . " / " . $row['simult_tasks'] . "</td>";
-  echo "<td>" . $row['last_poll'] . "</td>";
+  echo "<td>" . $row['nbtasks'] . " / " . $row['max_concurrent_tasks'] . "</td>";
+  echo "<td>" . $row['last_poll_time'] . "</td>";
   echo "</tr>";
 }
 
 echo "</table>";
 echo "<h2>Tasks done</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>taskdata</b></td><td><b>resultdata</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>taskdata</b></td><td><b>resultdata</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC;");
 while($row = $res->fetch()) {
@@ -104,7 +104,7 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
   echo "<td>" . $row['priority'] . "</td>";
-  echo "<td>" . $row['timeout'] . "s<br />";
+  echo "<td>" . $row['timeout_sec'] . "s<br />";
   if($row['nb_fails'] > 0)
   {
     echo "<font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font></td>";
@@ -155,7 +155,7 @@ while($row = $res->fetch()) {
 
 echo "</table>";
 echo "<h2>Tasks</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>taskdata</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>taskdata</b></td></tr>";
 $res = $db->query("
   SELECT queue.*,
          GROUP_CONCAT(server_types.name SEPARATOR ',') AS types
@@ -170,7 +170,7 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['name'] . "</td>";
   echo "<td>" . $row['status'] . "</td>";
   echo "<td>" . $row['priority'] . "</td>";
-  echo "<td>" . $row['timeout'] . "s<br />";
+  echo "<td>" . $row['timeout_sec'] . "s<br />";
   if($row['nb_fails'] > 0)
   {
     echo "<font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font></td>";

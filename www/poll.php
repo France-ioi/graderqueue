@@ -5,7 +5,7 @@
 
 require("config.inc.php");
 
-if($servdata = getclientinfo('servers')) {
+if($servdata = get_ssl_client_info('servers')) {
   # Client was identified by a SSL client certificate
   $server_id = $servdata['id'];
 } else {
@@ -15,16 +15,16 @@ if($servdata = getclientinfo('servers')) {
 $server_tags = array();
 
 # Check the server isn't considered as busy
-if($servdata['simult_tasks'] > 0) {
+if($servdata['max_concurrent_tasks'] > 0) {
   $stmt = $db->prepare("SELECT COUNT(*) FROM `queue` WHERE sent_to=:sid;");
   $stmt->execute(array(':sid' => $server_id));
   $taskcount = $stmt->fetch()[0];
-  if($taskcount > $servdata['simult_tasks']) {
+  if($taskcount > $servdata['max_concurrent_tasks']) {
     die(jsonerror(1, "Server already accepted too many tasks."));
   }
 }
 
-$stmt = $db->prepare("UPDATE `servers` SET status='polling', last_poll=NOW() WHERE id=:sid;");
+$stmt = $db->prepare("UPDATE `servers` SET status='polling', last_poll_time=NOW() WHERE id=:sid;");
 $stmt->execute(array(':sid' => $server_id));
 $start_time = time();
 
@@ -59,7 +59,7 @@ while(time() - $start_time < 30) {
     }
 
     # We send the task and write down which server we sent it to
-    $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=NOW()+timeout WHERE id=:id;");
+    $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=NOW()+timeout_sec WHERE id=:id;");
     if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
       echo json_encode(array('errorcode' => 0,
             'taskid' => intval($row['id']),

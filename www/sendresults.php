@@ -5,7 +5,7 @@
 
 require("config.inc.php");
 
-if($servdata = getclientinfo('servers')) {
+if($servdata = get_ssl_client_info('servers')) {
   # Client was identified by a SSL client certificate
   $server_id = $servdata['id'];
 } else {
@@ -31,8 +31,8 @@ if(!$row = $res->fetch()) {
 }
 
 if(isset($_POST['resultdata'])) {
-  $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
-                 SELECT queue.id, queue.name, queue.priority, queue.timeout, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), :resultdata
+  $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
+                 SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), :resultdata
                  FROM `queue`
                  WHERE id=:taskid;");
   if($stmt->execute(array(':resultdata' => $_POST['resultdata'], ':taskid' => $task_id))) {

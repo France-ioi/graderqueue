@@ -29,7 +29,7 @@ function db_log($log_type, $task_id, $server_id, $message) {
   return $stmt->execute(array(':type' => $log_type, ':taskid' => $task_id, ':sid' => $server_id, ':msg' => $message));
 }
 
-function getclientinfo($table) {
+function get_ssl_client_info($table) {
   # Returns the database row about a client identified by his SSL cert
   # table must be one of 'platforms' or 'servers'
   # Returns NULL if identification failed
@@ -37,7 +37,7 @@ function getclientinfo($table) {
   global $db;
 
   if($table != 'platforms' && $table != 'servers') {
-    throw new Exception("`$table` invalid for getclientinfo.");
+    throw new Exception("`$table` invalid for get_ssl_client_info.");
   }
 
   if(isset($_SERVER['SSL_CLIENT_VERIFY']) && $_SERVER['SSL_CLIENT_VERIFY'] == 'SUCCESS') {

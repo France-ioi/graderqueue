@@ -6,12 +6,12 @@
 
 require("config.inc.php");
 
-if($platdata = getclientinfo('platforms')) {
+if($platdata = get_ssl_client_info('platforms')) {
   # Client was identified by a SSL client certificate
   $received_from = $platdata['id'];
 } elseif(isset($_POST['token'])) {
   # API used through interface.php, check token for validity
-  $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expires >= NOW() AND token = :token;");
+  $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
   $stmt->execute(array(':token' => $_POST['token']));
   if($stmt->fetch()) {
     $received_from = -1;
@@ -21,7 +21,7 @@ if($platdata = getclientinfo('platforms')) {
   } else {
     die(jsonerror(3, "Invalid token, please refresh the interface to get a new one."));
   }
-  $db->query("DELETE FROM `tokens` WHERE expires < NOW();");
+  $db->query("DELETE FROM `tokens` WHERE expiration_time < NOW();");
 } else {
   die(jsonerror(3, "No valid authentication provided."));
 }
@@ -157,6 +157,7 @@ if(!isset($_POST['request'])) {
   if(count($tagids) > 0) {
     # Fetch all server types which can execute with these tags
     $typeids = array();
+    # Data is safe, and a prepared statement would be too complicated
     $typeq = $db->query("SELECT typeid, COUNT(*) AS nb FROM type_tags WHERE tagid IN (" . implode(',', $tagids) . ") GROUP BY typeid HAVING nb=" . count($tagids) . ";");
     while($row = $typeq->fetch()) {
       $typeids[] = $row['typeid'];
@@ -203,13 +204,13 @@ if(!isset($_POST['request'])) {
     $query .= " WHERE type IN (" . implode(',', $typeids) . ")";
   }
   $query .= " GROUP BY servers.id
-    ORDER BY nbtasks DESC, last_poll DESC;";
+    ORDER BY nbtasks DESC, last_poll_time DESC;";
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if(!($row['nbtasks'] < $row['simult_tasks'] or time()-strtotime($row['last_poll'] < 60)))
+    if(!($row['nbtasks'] < $row['max_concurrent_tasks'] or time()-strtotime($row['last_poll_time'] < 60)))
     {
       # Need to wake this server up
-      if(($fs = fsockopen($row['url_wakeup'])) !== FALSE)
+      if(($fs = fsockopen($row['wakeup_url'])) !== FALSE)
       {
         fwrite($fs, ' ');
         fclose($fs);

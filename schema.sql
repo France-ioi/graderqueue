@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS `done` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `priority` int(11) NOT NULL DEFAULT '0',
-  `timeout` int(11) NOT NULL DEFAULT '300',
+  `timeout_sec` int(11) NOT NULL DEFAULT '300',
   `nb_fails` int(11) NOT NULL DEFAULT '0',
   `received_from` int(11) NOT NULL DEFAULT '-1',
   `received_time` datetime NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `queue` (
   `name` varchar(255) NOT NULL,
   `status` enum('queued','sent','error') NOT NULL DEFAULT 'queued',
   `priority` int(11) NOT NULL DEFAULT '0',
-  `timeout` int(11) NOT NULL DEFAULT '300',
+  `timeout_sec` int(11) NOT NULL DEFAULT '300',
   `nb_fails` int(11) NOT NULL DEFAULT '0',
   `received_from` int(11) NOT NULL DEFAULT '-1',
   `received_time` datetime NOT NULL,
@@ -52,23 +52,25 @@ CREATE TABLE IF NOT EXISTS `queue` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
+CREATE TABLE IF NOT EXISTS `server_types` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS `servers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
   `ssl_serial` varchar(255) NOT NULL,
   `ssl_dn` varchar(255) NOT NULL,
-  `url_wakeup` text NOT NULL,
+  `wakeup_url` text NOT NULL,
   `type` int(11) NOT NULL,
-  `simult_tasks` int(11) NOT NULL DEFAULT '1',
-  `last_poll` datetime NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
-
-CREATE TABLE IF NOT EXISTS `server_types` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
+  `max_concurrent_tasks` int(11) NOT NULL DEFAULT '1',
+  `last_poll_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `type` (`type`),
+  FOREIGN KEY (`type`) REFERENCES `server_types` (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `tags` (
@@ -80,19 +82,24 @@ CREATE TABLE IF NOT EXISTS `tags` (
 CREATE TABLE IF NOT EXISTS `task_types` (
   `taskid` int(11) NOT NULL,
   `typeid` int(11) NOT NULL,
+  PRIMARY KEY (`taskid`, `typeid`),
   KEY `taskid` (`taskid`),
-  KEY `typeid` (`typeid`)
+  KEY `typeid` (`typeid`),
+  FOREIGN KEY (`typeid`) REFERENCES `server_types` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `tokens` (
   `token` varchar(32) NOT NULL,
-  `expires` datetime NOT NULL,
+  `expiration_time` datetime NOT NULL,
   PRIMARY KEY (`token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `type_tags` (
   `typeid` int(11) NOT NULL,
   `tagid` int(11) NOT NULL,
+  PRIMARY KEY (`typeid`, `tagid`),
   KEY `typeid` (`typeid`),
-  KEY `tagid` (`tagid`)
+  KEY `tagid` (`tagid`),
+  FOREIGN KEY (`typeid`) REFERENCES `server_types` (`id`),
+  FOREIGN KEY (`tagid`) REFERENCES `tags` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
