@@ -1,0 +1,27 @@
+server {
+    listen  443;
+    ssl on;
+    server_name www.example.com;
+
+    root           /path/to/www;
+
+    ssl_certificate      /path/to/certs/graderqueueCA.pem;
+    ssl_certificate_key  /path/to/certs/graderqueueCA.key;
+    ssl_client_certificate /path/to/certs/graderqueueCA.crt;
+    ssl_verify_client optional;
+
+    location / {
+        try_files $uri $uri/;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass   unix:/var/run/php5-fpm.sock;
+        fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param  SSL_CLIENT_VERIFY $ssl_client_verify;
+        fastcgi_param  SSL_CLIENT_M_SERIAL $ssl_client_serial;
+        fastcgi_param  SSL_CLIENT_I_DN $ssl_client_i_dn;
+        include        fastcgi_params;
+    }
+}
+
+
