@@ -1,0 +1,8 @@
+<Files "interface.php">
+    AuthName "Interface login, authentication required"
+    AuthType Basic
+    AuthUserFile /path/to/some/htpasswd
+    AuthGroupFile /dev/null
+
+    Require valid-user
+</Files>
