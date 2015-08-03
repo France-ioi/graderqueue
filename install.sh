@@ -33,4 +33,4 @@ openssl req -x509 -new -nodes -key graderqueueCA.key -days 7300 -out graderqueue
 cp -p graderqueueCA.pem graderqueueCA.crt
 cd ..
 
-echo "Done! Please use certs/clientcert.sh to generate client certificates."
+echo "Done! Please use cd certs && ./clientcert.sh to generate client certificates."
