@@ -42,15 +42,16 @@ CREATE TABLE IF NOT EXISTS `platforms` (
     -- Platforms which can send tasks to the queue
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `ssl_serial` varchar(255) NOT NULL,
-  `ssl_dn` varchar(255) NOT NULL,
-    -- Client SSL certificate information: certificate serial + issuer DN
+    -- also used as key name in jwe tokens
+  `private_key` varchar(1000) NOT NULL,
+    -- private key to decode jwe tokens
   `restrict_paths` text NOT NULL,
     -- Paths to restrict execution of the tasks to, when they're sent by
     -- this platform
   `force_tag` int(11) NOT NULL DEFAULT '-1',
     -- Add a tag to all tasks sent by this platform
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `queue` (

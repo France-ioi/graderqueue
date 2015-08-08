@@ -3,6 +3,8 @@
 #
 # http://opensource.org/licenses/MIT
 
+require_once "../vendor/autoload.php";
+
 function deltatime($start, $end) {
   # Returns a string corresponding to the time delta between two datetimes
   $delta = strtotime($end) - strtotime($start);
@@ -51,4 +53,39 @@ function get_ssl_client_info($table) {
     return NULL; # Client certificate was invalid or non-present
   }
 }
-?>
+
+function get_token_client_info() {
+  # Returns the database row about a platform identified by the JWE token + the token data
+  # Returns NULL if identification failed
+
+  global $db;
+
+  if (!isset($_POST['sToken']) || !$_POST['sToken'] || !isset($_POST['sPlatform']) || !$_POST['sPlatform']) {
+    return NULL;
+  }
+
+  // get all keys from platforms, to see if one fits
+  $stmt = $db->prepare("SELECT * FROM `platforms` where name = :sPlatform;");
+  $stmt->execute(array('name' => $_POST['sPlatform']));
+  $platform = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$platform) {
+    return null;
+  }
+
+  // basic jwe configuration (must be the same on both sides!)
+  $jose = SpomkyLabs\Service\Jose::getInstance();
+  $jose->getConfiguration()->set('Compression', array('DEF'));
+  $jose->getConfiguration()->set('Algorithms', array(
+    'A256CBC-HS512',
+    'RSA-OAEP-256',
+  ));
+
+  // actually decrypting token
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($platform['private_key']), $_POST['sPlatform']);
+  try {
+    $result = $jose->load($jwe);
+  catch (Exception $e) {
+    die(jsonerror(2, "Invalid token."));
+  }
+  return array($platform, $result->getPayload());
+}

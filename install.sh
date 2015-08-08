@@ -16,3 +16,5 @@ DB_PASS=`grep CFG_db_password www/config.inc.php | head -n 1 | sed 's/^.*\"\(.*\
 DB_DB=`grep CFG_db_database www/config.inc.php | head -n 1 | sed 's/^.*\"\(.*\)\".*$/\1/'`
 
 mysql --host=$DB_HOST --user=$DB_USER --password=$DB_PASS --database=$DB_DB < schema.sql
+
+composer install

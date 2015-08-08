@@ -6,13 +6,16 @@
 
 require("config.inc.php");
 
-if($platdata = get_ssl_client_info('platforms')) {
-  # Client was identified by a SSL client certificate
+list($platdata, $request) = get_token_client_info();
+
+if ($platdata && $request) {
+  # Client was identified
   $received_from = $platdata['id'];
 } elseif ($CFG_accept_interface_tokens && isset($_POST['token'])) {
+  $request = $_POST;
   # API used through interface.php, check token for validity
   $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
-  $stmt->execute(array(':token' => $_POST['token']));
+  $stmt->execute(array(':token' => $request['token']));
   if($stmt->fetch()) {
     $received_from = -1;
     $platdata = array(
@@ -23,57 +26,57 @@ if($platdata = get_ssl_client_info('platforms')) {
   }
   $db->query("DELETE FROM `tokens` WHERE expiration_time < NOW();");
 } else {
-  die(jsonerror(3, "No valid authentication provided."));
+  die(jsonerror(2, "No valid authentication provided."));
 }
 
-if(!isset($_POST['request'])) {
+if(!isset($request['request'])) {
   die(jsonerror(2, "No request made."));
 
-} elseif($_POST['request'] == 'sendtask' or $_POST['request'] == 'sendsolution') {
+} elseif($request['request'] == 'sendtask' or $request['request'] == 'sendsolution') {
   # Send a task, either directly the JSON data, either the solution information
 
-  if($_POST['request'] == 'sendtask') {
+  if($request['request'] == 'sendtask') {
     # Client is sending task JSON directly
-    if(!isset($_POST['taskdata'])) {
+    if(!isset($request['taskdata'])) {
       die(jsonerror(2, "taskdata missing from request."));
     }
     try {
-        $taskdata = json_decode($_POST['taskdata']);
+        $taskdata = json_decode($request['taskdata']);
     } catch(Exception $e) {
         die(jsonerror(2, "Error while decoding task JSON : " . $e->getMessage()));
     }
 
-    if(isset($_POST['taskname'])) {
-      $taskname = $_POST['taskname'];
+    if(isset($request['taskname'])) {
+      $taskname = $request['taskname'];
     } else {
       $taskname = "api-sendtask";
     }
 
-  } elseif($_POST['request'] == 'sendsolution') {
+  } elseif($request['request'] == 'sendsolution') {
     # Client is sending only parameters, we make the task JSON from those
     foreach(array('taskpath', 'memlimit', 'timelimit', 'lang') as $key) {
-      if(!isset($_POST[$key])) {
+      if(!isset($request[$key])) {
         die(jsonerror(2, $key . " missing from request."));
       }
     }
 
-    if(!((isset($_POST['solpath']) and $_POST['solpath'] != '')
-        or (isset($_POST['solcontent']) and $_POST['solcontent'] != '')
+    if(!((isset($request['solpath']) and $request['solpath'] != '')
+        or (isset($request['solcontent']) and $request['solcontent'] != '')
         or (isset($_FILES['solfile']) and is_uploaded_file($_FILES['solfile']['tmp_name'])))) {
       die(jsonerror(2, "Solution missing from request."));
     }
 
-    $memlimit = max(4, intval($_POST['memlimit']));
-    $timelimit = max(1, intval($_POST['timelimit']));
-    $sollang = $_POST['lang'];
-    $priority = max(0, intval($_POST['priority']));
+    $memlimit = max(4, intval($request['memlimit']));
+    $timelimit = max(1, intval($request['timelimit']));
+    $sollang = $request['lang'];
+    $priority = max(0, intval($request['priority']));
 
-    if(isset($_POST['solpath']) and $_POST['solpath'] != '') {
-      $solname = basename($_POST['solpath']);
+    if(isset($request['solpath']) and $request['solpath'] != '') {
+      $solname = basename($request['solpath']);
       $soljson = array(
         "name" => $solname,
-        "path" => $_POST['solpath']);
-    } elseif(isset($_POST['solcontent']) and $_POST['solcontent'] != '') {
+        "path" => $request['solpath']);
+    } elseif(isset($request['solcontent']) and $request['solcontent'] != '') {
       # Adapt to sol
       if(isset($CFG_defaultexts[$sollang])) {
         $solname = "main" . $CFG_defaultexts[$sollang];
@@ -82,7 +85,7 @@ if(!isset($_POST['request'])) {
       }
       $soljson = array(
         "name" => $solname,
-        "content" => $_POST['solcontent']);
+        "content" => $request['solcontent']);
     } else {
       $solname = $_FILES['solfile']['name'];
       $soljson = array(
@@ -90,8 +93,8 @@ if(!isset($_POST['request'])) {
         "content" => file_get_contents($_FILES['solfile']['tmp_name']));
     }
 
-    if(isset($_POST['taskname'])) {
-      $taskname = $_POST['taskname'];
+    if(isset($request['taskname'])) {
+      $taskname = $request['taskname'];
     } else {
       $taskname = "api-" . $solname;
     }
@@ -119,7 +122,7 @@ if(!isset($_POST['request'])) {
         "runExecution" => $execparamsjson));
 
     $evaljson = array(
-        "taskPath" => $_POST['taskpath'],
+        "taskPath" => $request['taskpath'],
         "generators" => array("@defaultGenerator"),
         "generations" => array("@defaultGeneration"),
         "extraTests" => "@defaultExtraTests",
@@ -137,9 +140,9 @@ if(!isset($_POST['request'])) {
     $tagids[] = $platdata['force_tag'];
   }
 
-  if(isset($_POST['tags']) and $_POST['tags'] != '')
+  if(isset($request['tags']) and $request['tags'] != '')
   {
-    $tags = explode(',', $_POST['tags']);
+    $tags = explode(',', $request['tags']);
 
     # Fetch each tag
     foreach($tags as $t) {
@@ -163,7 +166,7 @@ if(!isset($_POST['request'])) {
       $typeids[] = $row['typeid'];
     }
     if(count($typeids) == 0) {
-      die(jsonerror(2, "No server type can execute tasks with tags " . $_POST['tags'] . "."));
+      die(jsonerror(2, "No server type can execute tasks with tags " . $request['tags'] . "."));
     }
   }
 
@@ -178,7 +181,7 @@ if(!isset($_POST['request'])) {
   # Queue entry
   $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, taskdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :taskdata);");
   $jsondata = json_encode($evaljson);
-  $stmt->execute(array(':name' => $taskname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $_POST['tags'], ':taskdata' => $jsondata));
+  $stmt->execute(array(':name' => $taskname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskdata' => $jsondata));
 
   $taskid = $db->lastInsertId();
   if(isset($typeids)) {
@@ -220,13 +223,13 @@ if(!isset($_POST['request'])) {
     }
   }
 
-} elseif($_POST['request'] == "gettask") {
+} elseif($request['request'] == "gettask") {
   # Read task information
-  if(!isset($_POST['taskid'])) {
+  if(!isset($request['taskid'])) {
     die(jsonerror(2, "No taskid given."));
   }
-  $taskid = intval($_POST['taskid']);
-  if($_POST['taskid'] != strval($taskid)) {
+  $taskid = intval($request['taskid']);
+  if($request['taskid'] != strval($taskid)) {
     die(jsonerror(2, "Invalid taskid."));
   }
 
