@@ -12,9 +12,11 @@
 # Path to the taskgrader executable
 CFG_TASKGRADER = '/path/to/taskgrader.py'
 
+CFG_SERVER_PIDFILE = '/path/to/pidfile'
+
 # URLs to the graderqueue
-CFG_GRADERQUEUE_POLL = '' # URL to poll tasks from
-CFG_GRADERQUEUE_SEND = '' # URL to send results
+CFG_GRADERQUEUE_POLL = '/url/to/poll.php' # URL to poll tasks from
+CFG_GRADERQUEUE_SEND = '/url/to/sendresults.php' # URL to send results
 
 # Paths for tasks fetched from the graderqueue
 CFG_GRADERQUEUE_ROOT = '' # rootPath to add to tasks
@@ -25,15 +27,15 @@ CFG_SERVER_RESTRICT  = []
 
 # Server certificate validation files
 # CA to check the certificate against; use a list for multiple CAs
-CFG_GRADERQUEUE_CA = ''   # CA.crt
+CFG_SSL_CA = ''   # CA.crt file path
 # Hostname checker to use on server certificate (for urllib2_ssl)
 # To check the hostname corresponds to the certificate,
 # use urllib2_ssl.match_hostname, else put None
-CFG_GRADERQUEUE_CHECKER = None
+CFG_SSL_CHECKER = None
 
 # Client SSL files
-CFG_GRADERQUEUE_KEY = ''  # local.key
-CFG_GRADERQUEUE_CERT = '' # local.crt
+CFG_SSL_KEY = ''  # local.key
+CFG_SSL_CERT = '' # local.crt
 
 
 
