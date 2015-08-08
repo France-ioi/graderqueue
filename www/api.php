@@ -9,7 +9,7 @@ require("config.inc.php");
 if($platdata = get_ssl_client_info('platforms')) {
   # Client was identified by a SSL client certificate
   $received_from = $platdata['id'];
-} elseif(isset($_POST['token'])) {
+} elseif ($CFG_accept_interface_tokens && isset($_POST['token'])) {
   # API used through interface.php, check token for validity
   $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
   $stmt->execute(array(':token' => $_POST['token']));

@@ -13,6 +13,9 @@ $CFG_db_user = "";
 $CFG_db_password = "";
 $CFG_db_database = "";
 
+# Accepts token from interface.php? (see api.php, not suitable for production)
+$CFG_accept_interface_tokens = false;
+
 # Default language extensions
 $CFG_defaultexts = array(
     "[default]" => ".sh",
