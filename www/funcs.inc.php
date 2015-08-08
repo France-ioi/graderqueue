@@ -58,7 +58,7 @@ function get_token_client_info() {
   # Returns the database row about a platform identified by the JWE token + the token data
   # Returns NULL if identification failed
 
-  global $db;
+  global $db, $CFG_private_key, $CFG_key_name;
 
   if (!isset($_POST['sToken']) || !$_POST['sToken'] || !isset($_POST['sPlatform']) || !$_POST['sPlatform']) {
     return NULL;
@@ -78,14 +78,17 @@ function get_token_client_info() {
   $jose->getConfiguration()->set('Algorithms', array(
     'A256CBC-HS512',
     'RSA-OAEP-256',
+    'RS512'
   ));
 
   // actually decrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($platform['private_key']), $_POST['sPlatform']);
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($platform['public_key']), $platform['name']);
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($CFG_private_key), $CFG_key_name);
   try {
-    $result = $jose->load($jwe);
+    $jws = $jose->load($jwe)->getPayload();
+    $params = $jose->load($jws)->getPayload();
   catch (Exception $e) {
     die(jsonerror(2, "Invalid token."));
   }
-  return array($platform, $result->getPayload());
+  return array($platform, $params);
 }

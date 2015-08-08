@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS `done` (
     -- Date/time the results were sent back
   `resultdata` longtext NOT NULL,
     -- JSON data for the results
+  `returnUrl` varchar(255) NOT NULL,
+    -- return Url given by the platform
+  `returnState` enum('notSent','sent','error') NOT NULL DEFAULT 'notSent',
+    -- if return Url worked as expected
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -42,9 +46,9 @@ CREATE TABLE IF NOT EXISTS `platforms` (
     -- Platforms which can send tasks to the queue
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-    -- also used as key name in jwe tokens
-  `private_key` varchar(1000) NOT NULL,
-    -- private key to decode jwe tokens
+    -- also used as key name in tokens
+  `public_key` varchar(1000) NOT NULL,
+    -- private key to decode signed tokens
   `restrict_paths` text NOT NULL,
     -- Paths to restrict execution of the tasks to, when they're sent by
     -- this platform
@@ -79,6 +83,8 @@ CREATE TABLE IF NOT EXISTS `queue` (
     -- Tags of the task
   `taskdata` longtext NOT NULL,
     -- JSON data for the task
+  `returnUrl` varchar(255) NOT NULL,
+    -- return Url given by the platform
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
