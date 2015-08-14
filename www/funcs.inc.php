@@ -87,7 +87,7 @@ function get_token_client_info() {
   try {
     $jws = $jose->load($jwe)->getPayload();
     $params = $jose->load($jws)->getPayload();
-  catch (Exception $e) {
+  } catch (Exception $e) {
     die(jsonerror(2, "Invalid token."));
   }
   return array($platform, $params);
