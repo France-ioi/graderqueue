@@ -10,9 +10,9 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, os, requests, string, sys, subprocess, time
+import argparse, json, os, sys, subprocess, time
 import urllib, urllib2, urllib2_ssl
-from config import CFG_TASKGRADER, CFG_SERVER_PIDFILE, CFG_GRADERQUEUE_POLL, CFG_GRADERQUEUE_SEND, CFG_GRADERQUEUE_ROOT, CFG_GRADERQUEUE_VARS, CFG_SERVER_RESTRICT, CFG_SSL_KEY, CFG_SSL_CERT, CFG_SSL_CA, CFG_SSL_CHECKER
+from config import *
 
 
 if __name__ == '__main__':
@@ -22,12 +22,42 @@ if __name__ == '__main__':
     argParser.add_argument('-d', '--debug', help='Shows all the JSON data in and out (implies -v)', action='store_true')
     argParser.add_argument('-D', '--daemon', help='Daemonize the process (incompatible with -v)', action='store_true')
     argParser.add_argument('-s', '--server', help='Server mode: start only if not already started (implies -D)', action='store_true')
+    argParser.add_argument('-t', '--test', help='Test communication with the graderqueue (exits after testing)', action='store_true')
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
 
     args = argParser.parse_args()
 
     args.verbose = args.verbose or args.debug
     args.daemon = args.daemon or args.server
+
+    # HTTPS layer
+    opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
+            key_file=CFG_SSL_KEY,
+            cert_file=CFG_SSL_CERT,
+            ca_certs=CFG_SSL_CA,
+            checker=CFG_SSL_CHECKER))
+
+    # Test mode: try communicating with the graderqueue
+    if args.test:
+        print "Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST
+        r = opener.open(CFG_GRADERQUEUE_TEST).read()
+
+        if args.debug:
+            print "Received: %s" % r
+
+        try:
+            jsondata = json.loads(r)
+        except:
+            print "Error: received invalid JSON data. Test failed."
+            sys.exit(1)
+
+        if jsondata['errorcode'] == 0:
+            print "Test successful, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg'])
+            sys.exit(0)
+        else:
+            print "Test failed, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg'])
+            sys.exit(1)
+
 
     if args.daemon and args.verbose:
         print "Can't daemonize while verbose mode is enabled."
@@ -79,11 +109,6 @@ if __name__ == '__main__':
         time.sleep(1)
 
         # Request data from the taskqueue
-        opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
-            key_file=CFG_SSL_KEY,
-            cert_file=CFG_SSL_CERT,
-            ca_certs=CFG_SSL_CA,
-            checker=CFG_SSL_CHECKER))
         r = opener.open(CFG_GRADERQUEUE_POLL).read()
         try:
             jsondata = json.loads(r)

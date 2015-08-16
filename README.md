@@ -71,6 +71,10 @@ Note that the interface uses an extra parameter, `token`, allowing it to bypass
 the SSL client certificate validation (thus why the interface needs to be
 secured in some way).
 
+### test
+`test` request allows a platform to test the connection and authentication. No
+parameters.
+
 ### sendtask
 `sendtask` request allows a platform to send a task directly with the JSON data. Parameters:
 
@@ -114,6 +118,9 @@ results on its standard output.
 
 Before using it, you need to edit `config.py`, using the template from
 `config.py.template`, and supply the client SSL certificate for this server.
+
+Once configured, you can execute `server.py -t` to test the connection and
+authentication to the graderqueue.
 
 To use the wake-up feature, you can for instance use `inetd`, and add a config
 line to a file named `/etc/inetd.d/taskgrader` with:

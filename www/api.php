@@ -199,6 +199,10 @@ if(!isset($_POST['request'])) {
     echo jsonerror(2, "Invalid taskid.");
   }
 
+} elseif($_POST['request'] == "test") {
+  # Test connection
+  die(jsonerror(0, "Connected as server id $received_from."));
+
 } else {
   die(jsonerror(2, "No request made."));
 }
