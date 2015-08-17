@@ -71,6 +71,10 @@ Note that the interface uses an extra parameter, `token`, allowing it to bypass
 the SSL client certificate validation (thus why the interface needs to be
 secured in some way).
 
+### test
+`test` request allows a platform to test the connection and authentication. No
+parameters.
+
 ### sendtask
 `sendtask` request allows a platform to send a task directly with the JSON data. Parameters:
 
@@ -86,6 +90,9 @@ JSON data of that task will in that case be generated with standard parameters
 by the API. It is mainly meant for use by the interface. Parameters:
 
 * `request`: `'sendsolution'`
+* `taskname`: (string) name for the task
+* `priority`: (integer) priority of the task in the queue
+* `tags`: (comma-separated list of strings) tags associated with the task
 * `solfile` or `solpath` or `solcontent`: solution, either as an uploaded file (`solfile`), as a path local to the grading server (`solpath`) or directly as the content of the solution (`solcontent`)
 * `taskpath`: (string) path to the problem
 * `memlimit`: (integer) memory limit for the execution of the solution
@@ -114,6 +121,9 @@ results on its standard output.
 
 Before using it, you need to edit `config.py`, using the template from
 `config.py.template`, and supply the client SSL certificate for this server.
+
+Once configured, you can execute `server.py -t` to test the connection and
+authentication to the graderqueue.
 
 To use the wake-up feature, you can for instance use `inetd`, and add a config
 line to a file named `/etc/inetd.d/taskgrader` with:

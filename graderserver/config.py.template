@@ -15,8 +15,10 @@ CFG_TASKGRADER = '/path/to/taskgrader.py'
 CFG_SERVER_PIDFILE = '/path/to/pidfile'
 
 # URLs to the graderqueue
-CFG_GRADERQUEUE_POLL = '/url/to/poll.php' # URL to poll tasks from
-CFG_GRADERQUEUE_SEND = '/url/to/sendresults.php' # URL to send results
+CFG_GRADERQUEUE_URL  = '' # Base URL for the graderqueue
+CFG_GRADERQUEUE_POLL = CFG_GRADERQUEUE_URL + 'poll.php' # URL to poll tasks from
+CFG_GRADERQUEUE_SEND = CFG_GRADERQUEUE_URL + 'sendresults.php' # URL to send results
+CFG_GRADERQUEUE_TEST = CFG_GRADERQUEUE_URL + 'test.php' # URL to test connection and authentication
 
 # Paths for tasks fetched from the graderqueue
 CFG_GRADERQUEUE_ROOT = '' # rootPath to add to tasks

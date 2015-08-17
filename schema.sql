@@ -100,8 +100,6 @@ CREATE TABLE IF NOT EXISTS `servers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
     -- Internal name for the server
-  `status` varchar(255) NOT NULL,
-    -- Status of the server
   `ssl_serial` varchar(255) NOT NULL,
   `ssl_dn` varchar(255) NOT NULL,
     -- Client SSL certificate information: certificate serial + issuer DN
