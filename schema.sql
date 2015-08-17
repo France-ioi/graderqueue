@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `platforms` (
     -- this platform
   `force_tag` int(11) NOT NULL DEFAULT '-1',
     -- Add a tag to all tasks sent by this platform
+  `return_url` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -83,8 +84,6 @@ CREATE TABLE IF NOT EXISTS `queue` (
     -- Tags of the task
   `taskdata` longtext NOT NULL,
     -- JSON data for the task
-  `returnUrl` varchar(255) NOT NULL,
-    -- return Url given by the platform
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
