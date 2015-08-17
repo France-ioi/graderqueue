@@ -18,6 +18,11 @@ if(isset($_POST['taskid'])) {
   die(jsonerror(2, "No task ID sent."));
 }
 
+// get platform information
+$res = $db->prepare("SELECT * FROM `platforms` JOIN `queue` on queue.received_from = platform.id WHERE queue.id = :taskid;");
+$res->execute(array(':taskid' => $task_id));
+$platform = $res->fetch();
+
 # Isolate as a transaction
 $db->beginTransaction();
 
@@ -47,11 +52,46 @@ if(isset($_POST['resultdata'])) {
     db_log('error_saving_resultdata', $task_id, $server_id, '');
     echo jsonerror(2, "Error saving resultdata.");
   }
+  $db->commit();
 } else {
   # No result data sent
   db_log('error_no_resultdata', $task_id, $server_id, '');
   $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('error_no_resultdata', " . $task_id . "," . $server_id . ");");
   echo jsonerror(2, "No resultdata received.");
+  $db->commit();
+  exit();
 }
-$db->commit();
-?>
+
+// send result to return_url:
+
+$tokenParams = array(
+  'sTaskName' => $row['name'],
+  'sResultData' => $_POST['resultdata']
+);
+
+$jwe = encode_params_in_token($tokenParams, $platform);
+
+$post_request = array(
+   'sToken' => $jwe
+);
+
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL,$platform['return_url']);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_request));
+
+$server_output = curl_exec ($ch);
+
+curl_close ($ch);
+
+try {
+   $server_output = json_decode($server_output, true);
+} catch(Exception $e) {
+   error_log('cannot read platform return url of platform '.$platform['id'].' for task '.$task_id.': '.$e->getMessage());
+}
+
+if (!$server_output['bSuccess']) {
+   error_log('received error from return url of platform '.$platform['id'].' for task '.$task_id);
+}
