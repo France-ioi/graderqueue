@@ -66,7 +66,6 @@ if(!isset($_POST['request'])) {
     $memlimit = max(4, intval($_POST['memlimit']));
     $timelimit = max(1, intval($_POST['timelimit']));
     $sollang = $_POST['lang'];
-    $priority = max(0, intval($_POST['priority']));
 
     if(isset($_POST['solpath']) and $_POST['solpath'] != '') {
       $solname = basename($_POST['solpath']);
@@ -128,6 +127,8 @@ if(!isset($_POST['request'])) {
         "solutions" => $solutionsjson,
         "executions" => $executionsjson);
   }
+
+  $priority = max(0, intval($_POST['priority']));
 
   # Convert tags to list of server types which can execute the task
   if(isset($_POST['tags'])) {

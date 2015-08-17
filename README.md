@@ -90,6 +90,9 @@ JSON data of that task will in that case be generated with standard parameters
 by the API. It is mainly meant for use by the interface. Parameters:
 
 * `request`: `'sendsolution'`
+* `taskname`: (string) name for the task
+* `priority`: (integer) priority of the task in the queue
+* `tags`: (comma-separated list of strings) tags associated with the task
 * `solfile` or `solpath` or `solcontent`: solution, either as an uploaded file (`solfile`), as a path local to the grading server (`solpath`) or directly as the content of the solution (`solcontent`)
 * `taskpath`: (string) path to the problem
 * `memlimit`: (integer) memory limit for the execution of the solution
