@@ -125,7 +125,8 @@ function tagids_to_typeids($tagids) {
   $typeids = array();
   if(count($tagids) > 0) {
     # Data is safe, and a prepared statement would be too complicated
-    $typeq = $db->query("SELECT typeid, COUNT(*) AS nb FROM type_tags WHERE tagid IN (" . implode(',', $tagids) . ") GROUP BY typeid HAVING nb=" . count($tagids) . ";");
+    $typeq = $db->prepare("SELECT typeid, COUNT(*) AS nb FROM type_tags WHERE tagid IN (" . implode(',', $tagids) . ") GROUP BY typeid HAVING nb=" . count($tagids) . ";");
+    $typeq->execute();
     while($row = $typeq->fetch()) {
       $typeids[] = $row['typeid'];
     }
@@ -145,7 +146,7 @@ function get_token_client_info() {
 
   // get all keys from platforms, to see if one fits
   $stmt = $db->prepare("SELECT * FROM `platforms` where name = :sPlatform;");
-  $stmt->execute(array('name' => $_POST['sPlatform']));
+  $stmt->execute(array('sPlatform' => $_POST['sPlatform']));
   $platform = $stmt->fetch(PDO::FETCH_ASSOC);
   if (!$platform) {
     return null;
@@ -161,13 +162,43 @@ function get_token_client_info() {
   ));
 
   // actually decrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($platform['public_key']), $platform['name']);
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource(openssl_pkey_get_private($CFG_private_key), $CFG_key_name);
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_private($platform['public_key']));
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
   try {
-    $jws = $jose->load($jwe)->getPayload();
+    $jws = $jose->load($_POST['sToken'])->getPayload();
     $params = $jose->load($jws)->getPayload();
   } catch (Exception $e) {
     die(jsonerror(2, "Invalid token."));
   }
   return array($platform, $params);
+}
+
+function encode_params_in_token($params, $platform) {
+  // basic jwe configuration (must be the same on both sides!)
+  $jose = SpomkyLabs\Service\Jose::getInstance();
+  $jose->getConfiguration()->set('Compression', array('DEF'));
+  $jose->getConfiguration()->set('Algorithms', array(
+    'A256CBC-HS512',
+    'RSA-OAEP-256',
+    'RS512'
+  ));
+
+  // actually encrypting token
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_private($platform['public_key']));
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
+  $jws = $jose->sign(
+    $CFG_key_name,
+    $params,
+    array(
+      "alg" => "RS512",
+      "kid" => $CFG_key_name,
+    )
+  );
+  $jwe = $jose->encrypt($platform['name'], $params, array(
+      'alg' => 'RSA-OAEP-256',
+      'enc' => 'A256CBC-HS512',
+      'kid' => $platform['name'],
+      'zip' => 'DEF',
+  ));
+  return $jwe;
 }
