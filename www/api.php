@@ -133,11 +133,11 @@ if(!isset($request['request'])) {
         "executions" => $executionsjson);
   }
 
-  $priority = max(0, intval($_POST['priority']));
+  $priority = max(0, intval($request['priority']));
 
   # Convert tags to list of server types which can execute the task
   if(isset($_POST['tags'])) {
-    $tagids = tags_to_tagids($_POST['tags']);
+    $tagids = tags_to_tagids($request['tags']);
   } else {
     $tagids = array();
   }
@@ -205,10 +205,9 @@ if(!isset($request['request'])) {
     echo jsonerror(2, "Invalid taskid.");
   }
 
-} elseif($_POST['request'] == "test") {
+} elseif($request['request'] == "test") {
   # Test connection
-  die(jsonerror(0, "Connected as server id $received_from."));
-
+  die(jsonerror(0, "Connected as platform id ".$platdata['id']));
 } else {
   die(jsonerror(2, "No request made."));
 }
