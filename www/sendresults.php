@@ -26,6 +26,19 @@ if (!$platform) {
   die(jsonerror(2, "Cannot find platform corresponding to task ".$task_id));
 }
 
+if (!$_POST['resultdata']) {
+   db_log('error_no_resultdata', $task_id, $server_id, '');
+   die(jsonerror(2, "No resultdata received."));
+}
+
+try {
+   $resultdata = json_decode($_POST['resultdata'], true);
+} catch(Exception $e) {
+   db_log('error_resultdata_not_json', $task_id, $server_id, '');
+   die(jsonerror(2, "Cannot decode resultdata: ".$e->getMessage()));
+}
+
+
 # Isolate as a transaction
 $db->beginTransaction();
 
@@ -38,12 +51,14 @@ if(!$row = $res->fetch()) {
   die(jsonerror(2, "Task doesn't exist or server doesn't have this task assigned."));
 }
 
-if(isset($_POST['resultdata']) && isset($_POST['resultdata']['errorcode']) && $_POST['resultdata']['errorcode'] == 0) {
+
+
+if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
   $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
                  SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), :resultdata
                  FROM `queue`
                  WHERE id=:taskid;");
-  if($stmt->execute(array(':resultdata' => $_POST['resultdata'], ':taskid' => $task_id))) {
+  if($stmt->execute(array(':resultdata' => json_encode($resultdata['taskdata']), ':taskid' => $task_id))) {
     # Success!
     $stmt = $db->prepare("DELETE FROM `queue` WHERE id=:taskid;");
     $stmt->execute(array(':taskid' => $task_id));
@@ -57,24 +72,16 @@ if(isset($_POST['resultdata']) && isset($_POST['resultdata']['errorcode']) && $_
   }
   $db->commit();
 } else {
-  if (!isset($_POST['resultdata'])) {
-     # No result data sent
-     db_log('error_no_resultdata', $task_id, $server_id, '');
-     echo jsonerror(2, "No resultdata received.");
-  } else {
-     # No result data sent
-     db_log('error_in_result', $task_id, $server_id, isset($_POST['resultdata']['errormsg']) ? $_POST['resultdata']['errormsg'] : '');
-     echo jsonerror(2, "Error received: ".$_POST['resultdata']['errormsg']);
-  }
+  db_log('error_in_result', $task_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();
-  exit();
+  die(jsonerror(2, "Error received: ".$resultdata['errormsg']));
 }
 
 // send result to return_url:
 
 $tokenParams = array(
   'sTaskName' => $row['name'],
-  'sResultData' => $_POST['resultdata']
+  'sResultData' => $resultdata['taskdata']
 );
 
 $jwe = encode_params_in_token($tokenParams, $platform);
