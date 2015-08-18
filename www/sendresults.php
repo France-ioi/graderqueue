@@ -19,9 +19,12 @@ if(isset($_POST['taskid'])) {
 }
 
 // get platform information
-$res = $db->prepare("SELECT * FROM `platforms` JOIN `queue` on queue.received_from = platform.id WHERE queue.id = :taskid;");
+$res = $db->prepare("SELECT platforms.* FROM `platforms` JOIN `queue` on queue.received_from = platforms.id WHERE queue.id = :taskid;");
 $res->execute(array(':taskid' => $task_id));
 $platform = $res->fetch();
+if (!$platform) {
+  die(jsonerror(2, "Cannot find platform corresponding to task ".$task_id));
+}
 
 # Isolate as a transaction
 $db->beginTransaction();
@@ -35,7 +38,7 @@ if(!$row = $res->fetch()) {
   die(jsonerror(2, "Task doesn't exist or server doesn't have this task assigned."));
 }
 
-if(isset($_POST['resultdata'])) {
+if(isset($_POST['resultdata']) && isset($_POST['resultdata']['errorcode']) && $_POST['resultdata']['errorcode'] == 0) {
   $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, taskdata, done_time, resultdata)
                  SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.taskdata, NOW(), :resultdata
                  FROM `queue`
@@ -54,10 +57,15 @@ if(isset($_POST['resultdata'])) {
   }
   $db->commit();
 } else {
-  # No result data sent
-  db_log('error_no_resultdata', $task_id, $server_id, '');
-  $db->query("INSERT INTO `log` (log_type, task_id, server_id) VALUES('error_no_resultdata', " . $task_id . "," . $server_id . ");");
-  echo jsonerror(2, "No resultdata received.");
+  if (!isset($_POST['resultdata'])) {
+     # No result data sent
+     db_log('error_no_resultdata', $task_id, $server_id, '');
+     echo jsonerror(2, "No resultdata received.");
+  } else {
+     # No result data sent
+     db_log('error_in_result', $task_id, $server_id, isset($_POST['resultdata']['errormsg']) ? $_POST['resultdata']['errormsg'] : '');
+     echo jsonerror(2, "Error received: ".$_POST['resultdata']['errormsg']);
+  }
   $db->commit();
   exit();
 }
@@ -93,5 +101,5 @@ try {
 }
 
 if (!$server_output['bSuccess']) {
-   error_log('received error from return url of platform '.$platform['id'].' for task '.$task_id);
+   error_log('received error from return url of platform '.$platform['id'].' for task '.$task_id.': '.$server_output['sError']);
 }

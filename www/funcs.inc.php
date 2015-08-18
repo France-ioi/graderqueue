@@ -162,7 +162,7 @@ function get_token_client_info() {
   ));
 
   // actually decrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_private($platform['public_key']));
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_public($platform['public_key']));
   $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
   try {
     $jws = $jose->load($_POST['sToken'])->getPayload();
@@ -174,6 +174,8 @@ function get_token_client_info() {
 }
 
 function encode_params_in_token($params, $platform) {
+  global $CFG_private_key, $CFG_key_name;
+  $params['date'] = date('d-m-Y');
   // basic jwe configuration (must be the same on both sides!)
   $jose = SpomkyLabs\Service\Jose::getInstance();
   $jose->getConfiguration()->set('Compression', array('DEF'));
@@ -184,7 +186,7 @@ function encode_params_in_token($params, $platform) {
   ));
 
   // actually encrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_private($platform['public_key']));
+  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_public($platform['public_key']));
   $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
   $jws = $jose->sign(
     $CFG_key_name,
@@ -194,7 +196,7 @@ function encode_params_in_token($params, $platform) {
       "kid" => $CFG_key_name,
     )
   );
-  $jwe = $jose->encrypt($platform['name'], $params, array(
+  $jwe = $jose->encrypt($platform['name'], $jws, array(
       'alg' => 'RSA-OAEP-256',
       'enc' => 'A256CBC-HS512',
       'kid' => $platform['name'],
