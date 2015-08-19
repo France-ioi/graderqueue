@@ -28,7 +28,7 @@ $stmt = $db->prepare("UPDATE `servers` SET status='polling', last_poll_time=NOW(
 $stmt->execute(array(':sid' => $server_id));
 $start_time = time();
 
-while(time() - $start_time < 30) {
+while(time() - $start_time < 20) {
   # We use a polling lock so that only one server polls the queue repeatedly
   $stmt = $db->prepare("SELECT GET_LOCK(:lockname, 10);");
   $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
@@ -77,9 +77,8 @@ while(time() - $start_time < 30) {
     $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
     exit();
   }
-  # We commit the transaction and release the polling lock after 0.5 seconds
+  # We commit the transaction and release the polling lock
   $db->commit();
-  usleep(500000);
   $stmt = $db->prepare("SELECT RELEASE_LOCK(:lockname);");
   $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
 }

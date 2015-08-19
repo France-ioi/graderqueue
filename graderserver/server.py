@@ -16,6 +16,8 @@ from config import *
 
 
 if __name__ == '__main__':
+    # Check
+
     # Read command line options
     argParser = argparse.ArgumentParser(description="Launches an evaluation server for use with the graderQueue.")
 
@@ -100,13 +102,9 @@ if __name__ == '__main__':
         # Write new PID
         open(CFG_SERVER_PIDFILE, 'w').write(str(os.getpid()))
 
-    lastTaskTime = time.time()
-
-    while(time.time()-lastTaskTime < 60):
-        # Main loop
-
-        # We wait 1 second between each poll request
-        time.sleep(1)
+    while(True):
+        # Main polling loop
+        # Will terminate after a poll without any available task or an error
 
         # Request data from the taskqueue
         r = opener.open(CFG_GRADERQUEUE_POLL).read()
@@ -127,7 +125,8 @@ if __name__ == '__main__':
         if jsondata['errorcode'] == 1:
             if args.verbose:
                 print 'Taskqueue has no available task.'
-            continue
+            # Exit the loop
+            break
         elif jsondata['errorcode'] == 2:
             print 'Error: Taskqueue returned an error (%s)' % jsondata['errormsg']
             sys.exit(1)
@@ -140,8 +139,6 @@ if __name__ == '__main__':
         elif not (jsondata.has_key('taskdata') and jsondata.has_key('taskname') and jsondata.has_key('taskid')):
             print 'Error: Taskqueue returned no taskdata.'
             sys.exit(1)
-
-        lastTaskTime = time.time()
 
         taskdata = jsondata['taskdata']
         if args.verbose:
