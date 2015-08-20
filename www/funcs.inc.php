@@ -26,11 +26,11 @@ function jsonerror($code, $msg) {
 }
 
 
-function db_log($log_type, $task_id, $server_id, $message) {
+function db_log($log_type, $job_id, $server_id, $message) {
   # Adds a log line to the database table 'log'
   global $db;
-  $stmt = $db->prepare("INSERT INTO `log` (date, log_type, task_id, server_id, message) VALUES(:type, :taskid, :sid, :msg)");
-  return $stmt->execute(array(':type' => $log_type, ':taskid' => $task_id, ':sid' => $server_id, ':msg' => $message));
+  $stmt = $db->prepare("INSERT INTO `log` (date, log_type, job_id, server_id, message) VALUES(:type, :jobid, :sid, :msg)");
+  return $stmt->execute(array(':type' => $log_type, ':jobid' => $job_id, ':sid' => $server_id, ':msg' => $message));
 }
 
 
@@ -64,17 +64,17 @@ function wake_up_server($typeids = array()) {
 
   $query = "
     SELECT servers.*,
-      COUNT(queue.id) AS nbtasks
+      COUNT(queue.id) AS nbjobs
     FROM `servers`
     LEFT JOIN queue ON queue.sent_to=servers.id";
   if(count($typeids) > 0) {
     $query .= " WHERE type IN (" . implode(',', $typeids) . ")";
   }
   $query .= " GROUP BY servers.id
-    ORDER BY nbtasks DESC, last_poll_time DESC;";
+    ORDER BY nbjobs DESC, last_poll_time DESC;";
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if(!($row['nbtasks'] < $row['max_concurrent_tasks'] or time()-strtotime($row['last_poll_time'] < 60)))
+    if(!($row['nbjobs'] < $row['max_concurrent_jobs'] or time()-strtotime($row['last_poll_time'] < 60)))
     {
       # Need to wake this server up
       if(($fs = fsockopen($row['wakeup_url'])) !== False)

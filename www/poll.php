@@ -15,12 +15,12 @@ if($servdata = get_ssl_client_info('servers')) {
 $server_tags = array();
 
 # Check the server isn't considered as busy
-if($servdata['max_concurrent_tasks'] > 0) {
+if($servdata['max_concurrent_jobs'] > 0) {
   $stmt = $db->prepare("SELECT COUNT(*) FROM `queue` WHERE sent_to=:sid;");
   $stmt->execute(array(':sid' => $server_id));
-  $taskcount = $stmt->fetch()[0];
-  if($taskcount > $servdata['max_concurrent_tasks']) {
-    die(jsonerror(1, "Server already accepted too many tasks."));
+  $jobcount = $stmt->fetch()[0];
+  if($jobcount > $servdata['max_concurrent_jobs']) {
+    die(jsonerror(1, "Server already accepted too many jobs."));
   }
 }
 
@@ -40,36 +40,36 @@ while(time() - $start_time < 20) {
   # Start a transaction to lock rows
   $db->beginTransaction();
 
-  # We select all tasks which can possibly be sent to the server; we'll sort through them later
+  # We select all jobs which can possibly be sent to the server; we'll sort through them later
   $queuelist = $db->prepare("SELECT * FROM `queue` WHERE sent_to!=:sid
                 AND (status='queued' OR (status='sent' AND timeout_time <= NOW() AND nb_fails=0))
-                AND EXISTS (SELECT 1 FROM task_types WHERE taskid=queue.id AND typeid=:typeid)
+                AND EXISTS (SELECT 1 FROM job_types WHERE jobid=queue.id AND typeid=:typeid)
                 ORDER BY priority DESC, received_time ASC LIMIT 1;");
   $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type']));
 
   if($row = $queuelist->fetch()) {
-    # We have a matching task
+    # We have a matching job
     if($row['status'] == 'sent') {
       # Task was selected because it timed out on last server
       # We update the tables
       $db->query("UPDATE `servers`,`queue` SET servers.status='timedout' WHERE queue.status='sent' AND queue.timeout_time <= NOW() AND queue.sent_to=servers.id;");
-      $db->query("INSERT INTO `log` (datetime, log_type, task_id, server_id) SELECT NOW(), 'error_timeout', queue.id, queue.sent_to FROM `queue` WHERE queue.status='sent' AND queue.timeout_time <= NOW();");
+      $db->query("INSERT INTO `log` (datetime, log_type, job_id, server_id) SELECT NOW(), 'error_timeout', queue.id, queue.sent_to FROM `queue` WHERE queue.status='sent' AND queue.timeout_time <= NOW();");
       $db->query("UPDATE `queue` SET sent_to=-1, status='error' WHERE status='sent' AND timeout_time <= NOW() AND nb_fails>=1;");
       $db->query("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE status='sent' AND timeout_time <= NOW() AND nb_fails<2;");
     }
 
-    # We send the task and write down which server we sent it to
+    # We send the job and write down which server we sent it to
     $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=NOW()+timeout_sec WHERE id=:id;");
     if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
       echo json_encode(array('errorcode' => 0,
-            'taskid' => intval($row['id']),
-            'taskname' => $row['name'],
-            'taskdata' => json_decode($row['taskdata'])));
+            'jobid' => intval($row['id']),
+            'jobname' => $row['name'],
+            'jobdata' => json_decode($row['jobdata'])));
       $stmt = $db->prepare("UPDATE `servers` SET status='busy' WHERE id=:sid;");
       $stmt->execute(array(':sid' => $server_id));
       db_log('notice_sentto', $row['id'], $server_id, '');
     } else {
-      echo jsonerror(2, "Failed to update queue, cannot send task.");
+      echo jsonerror(2, "Failed to update queue, cannot send job.");
     }
     # We sent something normally (except if we got an error), so we end
     $db->commit();
@@ -82,5 +82,5 @@ while(time() - $start_time < 20) {
   $stmt = $db->prepare("SELECT RELEASE_LOCK(:lockname);");
   $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
 }
-echo jsonerror(1, "No task available.");
+echo jsonerror(1, "No job available.");
 ?>

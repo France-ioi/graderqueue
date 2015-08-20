@@ -5,7 +5,7 @@
 #
 # http://opensource.org/licenses/MIT
 
-# This script starts a server, fetching tasks from the graderqueue and sending
+# This script starts a server, fetching jobs from the graderqueue and sending
 # them to the taskgrader.
 # See https://github.com/France-ioi/graderqueue .
 
@@ -127,9 +127,9 @@ if __name__ == '__main__':
 
     while(True):
         # Main polling loop
-        # Will terminate after a poll without any available task or an error
+        # Will terminate after a poll without any available job or an error
 
-        # Request data from the taskqueue
+        # Request data from the graderqueue
         if args.verbose: print 'Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL
         r = opener.open(CFG_GRADERQUEUE_POLL).read()
         try:
@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
         # Handle various possible errors
         if jsondata['errorcode'] == 1:
-            if args.verbose: print 'Taskqueue has no available task.'
+            if args.verbose: print 'Taskqueue has no available job.'
 
             if args.listen:
                 # Wait for a wake-up signal
@@ -156,8 +156,8 @@ if __name__ == '__main__':
                 if args.verbose: print 'Received wake-up signal.'
                 continue
             else:
-                # We didn't receive any task, exit
-                if args.verbose: print "No task available, exiting."
+                # We didn't receive any job, exit
+                if args.verbose: print "No job available, exiting."
                 break
 
         elif jsondata['errorcode'] == 2:
@@ -169,32 +169,32 @@ if __name__ == '__main__':
         elif jsondata['errorcode'] != 0:
             print 'Error: Taskqueue returned an unknown errorcode (%s): %s' % (jsondata['errorcode'], jsondata['errormsg'])
             sys.exit(1)
-        elif not (jsondata.has_key('taskdata') and jsondata.has_key('taskname') and jsondata.has_key('taskid')):
-            print 'Error: Taskqueue returned no taskdata.'
+        elif not (jsondata.has_key('jobdata') and jsondata.has_key('jobname') and jsondata.has_key('jobid')):
+            print 'Error: Taskqueue returned no jobdata.'
             sys.exit(1)
 
-        taskdata = jsondata['taskdata']
+        jobdata = jsondata['jobdata']
         if args.verbose:
-            print 'Received task %s (#%d)' % (jsondata['taskname'], jsondata['taskid'])
+            print 'Received job %s (#%d)' % (jsondata['jobname'], jsondata['jobid'])
 
-        taskdata['rootPath'] = CFG_GRADERQUEUE_ROOT
-        if taskdata.has_key('restrictToPaths'):
-            taskdata['restrictToPaths'] = map(lambda p: Template(p).safe_substitute(CFG_GRADERQUEUE_VARS), taskdata['restrictToPaths'])
-            taskdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
+        jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
+        if jobdata.has_key('restrictToPaths'):
+            jobdata['restrictToPaths'] = map(lambda p: Template(p).safe_substitute(CFG_GRADERQUEUE_VARS), jobdata['restrictToPaths'])
+            jobdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
         elif CFG_SERVER_RESTRICT:
-            taskdata['restrictToPaths'] = CFG_SERVER_RESTRICT
+            jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
         if args.debug:
             print ''
             print '* JSON sent to taskgrader:'
-            print json.dumps(taskdata)
+            print json.dumps(jobdata)
     
         # Send to taskgrader
         if args.debug:
             print ''
             print '* Output from taskgrader'
         proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (procOut, procErr) = proc.communicate(input=json.dumps(taskdata))
+        (procOut, procErr) = proc.communicate(input=json.dumps(jobdata))
 
         if args.debug:
             print ''
@@ -232,8 +232,8 @@ if __name__ == '__main__':
 
             # Send back results
             resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
-                    {'taskid': jsondata['taskid'],
-                     'resultdata': json.dumps({'errorcode': 0, 'taskdata': evalJson})})).read()
+                    {'jobid': jsondata['jobid'],
+                     'resultdata': json.dumps({'errorcode': 0, 'jobdata': evalJson})})).read()
 
             if args.verbose:
                 print "Sent results."
@@ -248,7 +248,7 @@ if __name__ == '__main__':
                 print procErr
 
             resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
-                    {'taskid': jsondata['taskid'],
+                    {'jobid': jsondata['jobid'],
                      'resultdata': json.dumps({'errorcode': 2, 'errormsg': "stdout:\n%s\nstderr:\n%s" % (procOut, procErr)})})).read()
 
         try:

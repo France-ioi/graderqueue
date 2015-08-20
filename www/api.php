@@ -32,28 +32,28 @@ if ($platdata && $request) {
 if(!isset($request['request'])) {
   die(jsonerror(2, "No request made."));
 
-} elseif($request['request'] == 'sendtask' or $request['request'] == 'sendsolution') {
-  # Send a task, either directly the JSON data, either the solution information
+} elseif($request['request'] == 'sendjob' or $request['request'] == 'sendsolution') {
+  # Send a job, either directly the JSON data, either the solution information
 
-  if($request['request'] == 'sendtask') {
-    # Client is sending task JSON directly
-    if(!isset($request['taskdata'])) {
-      die(jsonerror(2, "taskdata missing from request."));
+  if($request['request'] == 'sendjob') {
+    # Client is sending job JSON directly
+    if(!isset($request['jobdata'])) {
+      die(jsonerror(2, "jobdata missing from request."));
     }
     try {
-        $evaljson = json_decode($request['taskdata']);
+        $evaljson = json_decode($request['jobdata']);
     } catch(Exception $e) {
-        die(jsonerror(2, "Error while decoding task JSON : " . $e->getMessage()));
+        die(jsonerror(2, "Error while decoding job JSON : " . $e->getMessage()));
     }
 
-    if(isset($request['taskname'])) {
-      $taskname = $request['taskname'];
+    if(isset($request['jobname'])) {
+      $jobname = $request['jobname'];
     } else {
-      $taskname = "api-sendtask";
+      $jobname = "api-sendjob";
     }
 
   } elseif($request['request'] == 'sendsolution') {
-    # Client is sending only parameters, we make the task JSON from those
+    # Client is sending only parameters, we make the job JSON from those
     foreach(array('taskpath', 'memlimit', 'timelimit', 'lang') as $key) {
       if(!isset($request[$key])) {
         die(jsonerror(2, $key . " missing from request."));
@@ -94,13 +94,13 @@ if(!isset($request['request'])) {
         "content" => file_get_contents($_FILES['solfile']['tmp_name']));
     }
 
-    if(isset($request['taskname'])) {
-      $taskname = $request['taskname'];
+    if(isset($request['jobname'])) {
+      $jobname = $request['jobname'];
     } else {
-      $taskname = "api-" . $solname;
+      $jobname = "api-" . $solname;
     }
 
-    # Make JSON (as grade.py from taskgrader does)
+    # Make JSON (as grade.py from jobgrader does)
     $execparamsjson = array("timeLimitMs" => $timelimit,
         "memoryLimitKb" => $memlimit,
         "useCache" => True,
@@ -135,7 +135,7 @@ if(!isset($request['request'])) {
 
   $priority = max(0, intval($request['priority']));
 
-  # Convert tags to list of server types which can execute the task
+  # Convert tags to list of server types which can execute the job
   if(isset($_POST['tags'])) {
     $tagids = tags_to_tagids($request['tags']);
   } else {
@@ -150,7 +150,7 @@ if(!isset($request['request'])) {
   # Fetch all server types which can execute with these tags
   $typeids = tagids_to_typeids($tagids);
   if(count($typeids) == 0 && count($tagids) > 0) {
-    die(jsonerror(2, "No server type can execute tasks with tags " . $request['tags'] . "."));
+    die(jsonerror(2, "No server type can execute jobs with tags " . $request['tags'] . "."));
   }
 
   # Add path restrictions if needed
@@ -162,47 +162,47 @@ if(!isset($request['request'])) {
   $db->query("START TRANSACTION;");
 
   # Queue entry
-  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, taskdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :taskdata);");
+  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, jobdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :jobdata);");
   $jsondata = json_encode($evaljson);
-  $stmt->execute(array(':name' => $taskname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskdata' => $jsondata));
+  $stmt->execute(array(':name' => $jobname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':jobdata' => $jsondata));
 
-  $taskid = $db->lastInsertId();
+  $jobid = $db->lastInsertId();
   if(count($typeids) > 0) {
     # Only some server types can execute it
-    $db->query("INSERT INTO `task_types` (taskid, typeid) VALUES (" . $taskid . "," . implode("), (" . $taskid . ",", $typeids) . ");");
+    $db->query("INSERT INTO `job_types` (jobid, typeid) VALUES (" . $jobid . "," . implode("), (" . $jobid . ",", $typeids) . ");");
   } else {
-    # Set the task to be accepted by any server
-    $db->query("INSERT INTO `task_types` (taskid, typeid) SELECT " . $taskid . ", server_types.id FROM server_types;");
+    # Set the job to be accepted by any server
+    $db->query("INSERT INTO `job_types` (jobid, typeid) SELECT " . $jobid . ", server_types.id FROM server_types;");
   }
 
   $db->query("COMMIT;");
 
-  echo json_encode(array('errorcode' => 0, 'errormsg' => "Queued as task ID #" . $taskid . ".", 'taskid' => $taskid));
+  echo json_encode(array('errorcode' => 0, 'errormsg' => "Queued as job ID #" . $jobid . ".", 'jobid' => $jobid));
   flush();
 
   # Wake up a server if needed
   wake_up_server($typeids);
 
-} elseif($request['request'] == "gettask") {
-  # Read task information
-  if(!isset($request['taskid'])) {
-    die(jsonerror(2, "No taskid given."));
+} elseif($request['request'] == "getjob") {
+  # Read job information
+  if(!isset($request['jobid'])) {
+    die(jsonerror(2, "No jobid given."));
   }
-  $taskid = intval($request['taskid']);
-  if($request['taskid'] != strval($taskid)) {
-    die(jsonerror(2, "Invalid taskid."));
+  $jobid = intval($request['jobid']);
+  if($request['jobid'] != strval($jobid)) {
+    die(jsonerror(2, "Invalid jobid."));
   }
 
   $stmt1 = $db->prepare("SELECT * FROM queue WHERE id = :id AND received_from = :recfrom;");
   $stmt2 = $db->prepare("SELECT * FROM done WHERE id = :id AND received_from = :recfrom;");
-  $stmt1->execute(array(':id' => $taskid, ':recfrom' => $received_from));
-  $stmt2->execute(array(':id' => $taskid, ':recfrom' => $received_from));
+  $stmt1->execute(array(':id' => $jobid, ':recfrom' => $received_from));
+  $stmt2->execute(array(':id' => $jobid, ':recfrom' => $received_from));
   if($row = $stmt1->fetch()) {
     echo json_encode(array('errorcode' => 0, 'errormsg' => 'Success', 'origin' => 'queue', 'data' => $row));
   } elseif($row = $stmt2->fetch()) {
     echo json_encode(array('errorcode' => 0, 'errormsg' => 'Success', 'origin' => 'done', 'data' => $row));
   } else {
-    echo jsonerror(2, "Invalid taskid.");
+    echo jsonerror(2, "Invalid jobid.");
   }
 
 } elseif($request['request'] == "test") {

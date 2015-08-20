@@ -27,9 +27,9 @@ $tid = 0;
 </head>
 <body>
 <a name="form" />
-<h2>Send task</h2>
+<h2>Send job</h2>
 <div>
-<form enctype="multipart/form-data" action="api.php" id="taskSend">
+<form enctype="multipart/form-data" action="api.php" id="jobSend">
 Solution : <input type="file" name="solfile" /> <i>or</i> path <input type="text" name="solpath" /> <i>or</i> <a onclick="$('#solcontentarea').toggle();" href="#form">content</a><br />
 <span id="solcontentarea" style="display:none;"><textarea id="solcontent" name="solcontent"></textarea><br /></span>
 Task path : <input type="text" name="taskpath" size="150" value="$ROOT_PATH/FranceIOI/Contests/..." /><br />
@@ -41,7 +41,7 @@ Tags : <input type="text" name="tags" value="" /><br />
 Token : <input type="text" name="token" value="<?=$token ?>" />
 <input type="submit" value="Submit" />
 </form></div>
-<div>Test tasks :
+<div>Test jobs :
 <?php
 $bid = 0;
 $buttonsData = "";
@@ -58,15 +58,15 @@ foreach($CFG_buttons as $bname => $bdata) {
 }
 ?>
 </div>
-<div id="taskSendResult"></div>
+<div id="jobSendResult"></div>
 <?php
 echo "<h2>Servers</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>tasks</b></td><td><b>last_poll_time</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>jobs</b></td><td><b>last_poll_time</b></td></tr>";
 $res = $db->query("
   SELECT servers.*,
     server_types.name AS typename,
     GROUP_CONCAT(tags.name SEPARATOR ',') AS tags,
-    COUNT(queue.id) AS nbtasks
+    COUNT(queue.id) AS nbjobs
   FROM `servers`
   LEFT JOIN type_tags ON type_tags.typeid=servers.type
   LEFT JOIN tags ON type_tags.tagid=tags.id
@@ -78,8 +78,8 @@ while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
-  if($row['nbtasks'] > 0) {
-    echo "<td><font color=\"darkorange\">busy (" . $row['nbtasks'] . " tasks)</font></td>";
+  if($row['nbjobs'] > 0) {
+    echo "<td><font color=\"darkorange\">busy (" . $row['nbjobs'] . " jobs)</font></td>";
   } elseif(time()-strtotime($row['last_poll_time']) > 60) {
     echo "<td><font color=\"darkblue\">sleeping <i>(" . deltatime($row['last_poll_time'], 'now') . ")</i></font></td>";
   } else {
@@ -89,14 +89,14 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['ssl_dn'] . "</td>";
   echo "<td>" . $row['wakeup_url'] . "</td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
-  echo "<td>" . $row['nbtasks'] . " / " . $row['max_concurrent_tasks'] . "</td>";
+  echo "<td>" . $row['nbjobs'] . " / " . $row['max_concurrent_jobs'] . "</td>";
   echo "<td>" . $row['last_poll_time'] . "</td>";
   echo "</tr>";
 }
 
 echo "</table>";
 echo "<h2>Tasks done</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>taskdata</b></td><td><b>resultdata</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC;");
 while($row = $res->fetch()) {
@@ -125,10 +125,10 @@ while($row = $res->fetch()) {
     echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</a><br />";
     echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $resultdata['errormsg'] . "</pre>";
     $tid += 1;
-  } elseif(!isset($resultdata['taskdata'])) {
-    echo "Unrecognized resultdata, taskdata field missing.";
+  } elseif(!isset($resultdata['jobdata'])) {
+    echo "Unrecognized resultdata, jobdata field missing.";
   } else {
-    foreach($resultdata['taskdata']['executions'] as $execution) {
+    foreach($resultdata['jobdata']['executions'] as $execution) {
       echo "*&nbsp;Execution&nbsp;" . $execution['name'] . "&nbsp;:<br />";
       foreach($execution['testsReports'] as $report) {
         if(isset($report['checker'])) {
@@ -146,7 +146,7 @@ while($row = $res->fetch()) {
     }
   }
   echo "</td>";
-  echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['taskdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
+  echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['jobdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
   $tid += 1;
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['resultdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
   $tid += 1;
@@ -155,13 +155,13 @@ while($row = $res->fetch()) {
 
 echo "</table>";
 echo "<h2>Tasks</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>taskdata</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>jobdata</b></td></tr>";
 $res = $db->query("
   SELECT queue.*,
          GROUP_CONCAT(server_types.name SEPARATOR ',') AS types
   FROM `queue`
-  LEFT JOIN task_types ON task_types.taskid=queue.id
-  LEFT JOIN server_types ON server_types.id=task_types.typeid
+  LEFT JOIN job_types ON job_types.jobid=queue.id
+  LEFT JOIN server_types ON server_types.id=job_types.typeid
   GROUP BY queue.id
   ORDER BY priority DESC, received_time ASC;");
 while($row = $res->fetch()) {
@@ -189,21 +189,21 @@ while($row = $res->fetch()) {
   } else {
     echo "</td>";
   }
-  echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['taskdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
+  echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['jobdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
   $tid += 1;
   echo "</tr>";
 }
 
 echo "</table>";
 echo "<h2>Log</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>task_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>job_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
 $res = $db->query("SELECT * FROM `log` ORDER BY datetime DESC;");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['datetime'] . "</td>";
   echo "<td>" . $row['log_type'] . "</td>";
-  echo "<td>" . $row['task_id'] . "</td>";
+  echo "<td>" . $row['job_id'] . "</td>";
   echo "<td>" . $row['server_id'] . "</td>";
   echo "<td>" . $row['message'] . "</td>";
   echo "</tr>";
@@ -221,12 +221,12 @@ buttonsData = new Array();
 echo $buttonsData;
 ?>
 
-$( "#taskSend" ).submit(function( event ) {
+$( "#jobSend" ).submit(function( event ) {
   event.preventDefault();
   var $form = $( this ),
     url = $form.attr( "action" );
 
-  $( "#taskSendResult" ).empty().append("<img src=\"res/loading.gif\" />");
+  $( "#jobSendResult" ).empty().append("<img src=\"res/loading.gif\" />");
   fdata = new FormData(this);
   fdata.append("request", "sendsolution");
   $.ajax({
@@ -236,12 +236,12 @@ $( "#taskSend" ).submit(function( event ) {
     cache: false,
     processData: false,
     contentType: false,
-    success: function( data ) { $( "#taskSendResult" ).empty().append(data); }
+    success: function( data ) { $( "#jobSendResult" ).empty().append(data); }
   });
 });
 
 function sendPath( pathid ) {
-    $("#taskSend").find('input').val(function(idx, val) {
+    $("#jobSend").find('input').val(function(idx, val) {
       if(this.name in buttonsData[pathid]) {
         return buttonsData[pathid][this.name];
       } else {
