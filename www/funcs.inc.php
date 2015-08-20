@@ -102,8 +102,9 @@ function wake_up($url) {
   if(($fs = fsockopen($url)) !== False)
   {
     fwrite($fs, 'wakeup');
+    $answer = fread($fs, 1024);
     fclose($fs);
-    return True;
+    return ($answer == 'ok');
   } else {
     return False;
   }

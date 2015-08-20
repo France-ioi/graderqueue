@@ -15,8 +15,8 @@ import urllib, urllib2, urllib2_ssl
 from config import *
 
 
-def listenUdp(ev):
-    """Listening loop: listen on UDP, set the event ev each time we get a
+def listenWakeup(ev):
+    """Listening loop: listen on TCP, set the event ev each time we get a
     wake-up signal."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
@@ -25,7 +25,10 @@ def listenUdp(ev):
         (data, addr) = sock.recvfrom(1024)
         # TODO :: Replace this by a real authentication
         if data == 'wakeup':
+            s.sendto('ok', addr)
             ev.set()
+        else:
+            s.sendto('no', addr)
 
 
 if __name__ == '__main__':
