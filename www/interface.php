@@ -59,6 +59,7 @@ foreach($CFG_buttons as $bname => $bdata) {
 ?>
 </div>
 <div id="jobSendResult"></div>
+<a name="servers" />
 <?php
 echo "<h2>Servers</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>jobs</b></td><td><b>last_poll_time</b></td></tr>";
@@ -87,7 +88,7 @@ while($row = $res->fetch()) {
   }
   echo "<td>" . $row['ssl_serial'] . "</td>";
   echo "<td>" . $row['ssl_dn'] . "</td>";
-  echo "<td>" . $row['wakeup_url'] . "</td>";
+  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a></td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
   echo "<td>" . $row['nbjobs'] . " / " . $row['max_concurrent_jobs'] . "</td>";
   echo "<td>" . $row['last_poll_time'] . "</td>";
@@ -95,6 +96,7 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
+echo "<div id=\"serverResult\"></div>";
 echo "<h2>Tasks done</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
@@ -239,6 +241,16 @@ $( "#jobSend" ).submit(function( event ) {
     success: function( data ) { $( "#jobSendResult" ).empty().append(data); }
   });
 });
+
+function wakeupServer(sid) {
+  $.ajax({
+    url: "api.php",
+    type: 'POST',
+    data: {"request": "wakeup", "serverid": sid, "token": "<?=$token ?>"},
+    cache: true,
+    success: function( data ) { $( "#serverResult" ).empty().append(data); }
+  });
+};
 
 function sendPath( pathid ) {
     $("#jobSend").find('input').val(function(idx, val) {

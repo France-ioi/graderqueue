@@ -181,7 +181,7 @@ if(!isset($request['request'])) {
   flush();
 
   # Wake up a server if needed
-  wake_up_server($typeids);
+  wake_up_server_by_type($typeids);
 
 } elseif($request['request'] == "getjob") {
   # Read job information
@@ -208,6 +208,14 @@ if(!isset($request['request'])) {
 } elseif($request['request'] == "test") {
   # Test connection
   die(jsonerror(0, "Connected as platform id ".$platdata['id']));
+} elseif($request['request'] == "wakeup" && $received_from == -1) {
+  # Wake-up a server (only through interface)
+  $sid = max(0, intval($request['serverid']));
+  if(wake_up_server_by_id($sid)) {
+    die(jsonerror(0, "Server wake-up successful."));
+  } else {
+    die(jsonerror(1, "Server wake-up failed."));
+  }
 } else {
   die(jsonerror(2, "No request made."));
 }

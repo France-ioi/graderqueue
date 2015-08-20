@@ -57,7 +57,7 @@ function get_ssl_client_info($table) {
   }
 }
 
-function wake_up_server($typeids = array()) {
+function wake_up_server_by_type($typeids = array()) {
   # Wake up a server if needed
 
   global $db;
@@ -77,10 +77,7 @@ function wake_up_server($typeids = array()) {
     if(!($row['nbjobs'] < $row['max_concurrent_jobs'] or time()-strtotime($row['last_poll_time'] < 60)))
     {
       # Need to wake this server up
-      if(($fs = fsockopen($row['wakeup_url'])) !== False)
-      {
-        fwrite($fs, ' ');
-        fclose($fs);
+      if(wake_up($row['wakeup_url'])) {
         return True;
       }
       # If failed we'll try the next server
@@ -89,6 +86,28 @@ function wake_up_server($typeids = array()) {
   return False;
 }
 
+function wake_up_server_by_id($sid) {
+  global $db;
+
+  $stmt = $db->prepare("SELECT wakeup_url FROM `servers` WHERE id=:sid;");
+  $stmt->execute(array(':sid' => $sid));
+  if($row = $stmt->fetch()) {
+    return wake_up($row['wakeup_url']);
+  } else {
+    return False;
+  }
+}
+
+function wake_up($url) {
+  if(($fs = fsockopen($url)) !== False)
+  {
+    fwrite($fs, 'wakeup');
+    fclose($fs);
+    return True;
+  } else {
+    return False;
+  }
+}
 
 function tags_to_tagids($tags) {
   # Convert tag names list to list of tag IDs
