@@ -27,6 +27,10 @@ CFG_GRADERQUEUE_VARS = {} # Values for variables from the graderqueue
 # Paths to restrict taskgrader access to
 CFG_SERVER_RESTRICT  = []
 
+# Wake-up parameters: IP and port to listen on
+CFG_WAKEUP_IP   = '0.0.0.0'
+CFG_WAKEUP_PORT = 20000
+
 # Server certificate validation files
 # CA to check the certificate against; use a list for multiple CAs
 CFG_SSL_CA = ''   # CA.crt file path
@@ -38,7 +42,5 @@ CFG_SSL_CHECKER = None
 # Client SSL files
 CFG_SSL_KEY = ''  # local.key
 CFG_SSL_CERT = '' # local.crt
-
-
 
 ##### END OF CONFIGURATION #####

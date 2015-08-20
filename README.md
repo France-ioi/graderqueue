@@ -138,8 +138,5 @@ Before using it, you need to edit `config.py`, using the template from
 Once configured, you can execute `server.py -t` to test the connection and
 authentication to the graderqueue.
 
-To use the wake-up feature, you can for instance use `inetd`, and add a config
-line to a file named `/etc/inetd.d/taskgrader` with:
-
-    [port]   stream  tcp nowait  [user]  /path/to/server.py /path/to/server.py --server
-
+The command `server.py -s` will launch it in server-mode: it will daemonize and
+listen on UDP for wake-up signals from the graderqueue.

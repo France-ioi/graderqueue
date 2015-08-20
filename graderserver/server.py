@@ -10,27 +10,41 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, os, sys, subprocess, time
+import argparse, json, os, socket, sys, subprocess, threading
 import urllib, urllib2, urllib2_ssl
 from config import *
 
 
-if __name__ == '__main__':
-    # Check
+def listenUdp(ev):
+    """Listening loop: listen on UDP, set the event ev each time we get a
+    wake-up signal."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
 
+    while True:
+        (data, addr) = sock.recvfrom(1024)
+        # TODO :: Replace this by a real authentication
+        if data == 'wakeup':
+            ev.set()
+
+
+if __name__ == '__main__':
     # Read command line options
     argParser = argparse.ArgumentParser(description="Launches an evaluation server for use with the graderQueue.")
 
     argParser.add_argument('-d', '--debug', help='Shows all the JSON data in and out (implies -v)', action='store_true')
     argParser.add_argument('-D', '--daemon', help='Daemonize the process (incompatible with -v)', action='store_true')
-    argParser.add_argument('-s', '--server', help='Server mode: start only if not already started (implies -D)', action='store_true')
+    argParser.add_argument('-l', '--listen', help='Listen on UDP and wait for a wake-up signal', action='store_true')
+    argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -Dl)', action='store_true')
     argParser.add_argument('-t', '--test', help='Test communication with the graderqueue (exits after testing)', action='store_true')
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
 
     args = argParser.parse_args()
 
-    args.verbose = args.verbose or args.debug
+    # Some options imply others
     args.daemon = args.daemon or args.server
+    args.listen = args.listen or args.server
+    args.verbose = args.verbose or args.debug
 
     # HTTPS layer
     opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
@@ -102,11 +116,21 @@ if __name__ == '__main__':
         # Write new PID
         open(CFG_SERVER_PIDFILE, 'w').write(str(os.getpid()))
 
+    if args.listen:
+        # Launch a thread to listen on the UDP port
+        # The Event allows to tell when a wakeup signal has been received
+        wakeupEvent = threading.Event()
+
+        wakeupThread = threading.Thread(target=listenUdp, kwargs={'ev': wakeupEvent})
+        wakeupThread.setDaemon(True)
+        wakeupThread.start()
+
     while(True):
         # Main polling loop
         # Will terminate after a poll without any available task or an error
 
         # Request data from the taskqueue
+        if args.verbose: print 'Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL
         r = opener.open(CFG_GRADERQUEUE_POLL).read()
         try:
             jsondata = json.loads(r)
@@ -119,14 +143,23 @@ if __name__ == '__main__':
             print 'Error: Taskqueue returned data without errorcode.'
             sys.exit(1)
 
-        start_time = time.clock()
-
         # Handle various possible errors
         if jsondata['errorcode'] == 1:
-            if args.verbose:
-                print 'Taskqueue has no available task.'
-            # Exit the loop
-            break
+            if args.verbose: print 'Taskqueue has no available task.'
+
+            if args.listen:
+                # Wait for a wake-up signal
+                wakeupEvent.clear()
+                while not wakeupEvent.wait(1):
+                    # We use a timeout to keep the main thread responsive to interruptions
+                    pass
+                if args.verbose: print 'Received wake-up signal.'
+                continue
+            else:
+                # We didn't receive any task, exit
+                if args.verbose: print "No task available, exiting."
+                break
+
         elif jsondata['errorcode'] == 2:
             print 'Error: Taskqueue returned an error (%s)' % jsondata['errormsg']
             sys.exit(1)
@@ -225,5 +258,3 @@ if __name__ == '__main__':
         except:
             print "Error: Taskqueue answered results with invalid data (%s)" % resp
             sys.exit(1)
-
-    print "No task available, sleeping."
