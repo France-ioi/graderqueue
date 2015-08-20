@@ -12,6 +12,7 @@ with any program using JSON to describe tasks and results.
 * Platforms get the results through the API
 
 ## Installation
+* install [composer](https://getcomposer.org/) and run `composer install`
 * In the `www` folder, copy `config.inc.php.template` to `config.inc.php` and edit it to suit your needs.
 * Execute `install.sh` in the root folder, it will set up the database and create the graderqueue certificate.
 * Create keys for the platforms and the servers using `clientcert.sh` in the `certs` folder.
@@ -27,14 +28,26 @@ be configured.
 
 ### Setting up a platform
 Platforms send tasks through the API. They need to be registered first in the table `platforms`:
-* `id` and `name` are internal identifiers
-* `ssl_serial` and `ssl_dn` are the serial and issuer DN of the client SSL certificate used by the platform
+* `id` and `name` are internal identifiers (name is also the key id used in token communication)
+* `public_key` is the public key of the platform (used in token communications)
+* `return_url` is the url where the result of the evaluation will be sent
 * `restrict_paths` means, if not empty, that the tasks sent by this platform will have access restricted to these paths during their execution
 * `force_tag` means, if not `-1`, that the tag with this id will be added to all tasks sent by this platform
 
-Platforms need to call the API through HTTPS, using a client SSL certificate
-issued by the platform. The script `certs/clientcert.sh` easily creates such a
-certificate.
+Platforms need to call the API with their request encoded in a token, passed in a post variable name `token`. This token ([jwt](http://jwt.io/)) has the following characteristics:
+
+* it is encrypted (JWE) with the following parameters (all names are standard):
+   * *algorithm:* `RSA-OAEP-256`
+   * *encoding:* `A256CBC-HS512`
+   * *compression:* `DEF`
+   * *key id:* the configuration option `$CFG_key_name` of `www/config.inc.php`
+* its payload is a signed token (JWS) with the following parameters:
+   * *algorithm:* `RS512`
+   * *key id*: the sql field `platforms.name`
+
+The jws token can be verified with the platform public key (`platforms.public_key`) and the jwe can be decrypted with `$CFG_private_key` of `www/config.inc.php`.
+
+Tokens used in the communication with the platform's return url are one the exact same principle.
 
 ### Setting up a server
 Servers poll the graderqueue for tasks, execute them, then send back the results. They need to be registered as well in the table `servers`:

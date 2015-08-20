@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS `done` (
     -- Date/time the results were sent back
   `resultdata` longtext NOT NULL,
     -- JSON data for the results
+  `returnUrl` varchar(255) NOT NULL,
+    -- return Url given by the platform
+  `returnState` enum('notSent','sent','error') NOT NULL DEFAULT 'notSent',
+    -- if return Url worked as expected
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -42,15 +46,17 @@ CREATE TABLE IF NOT EXISTS `platforms` (
     -- Platforms which can send tasks to the queue
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `ssl_serial` varchar(255) NOT NULL,
-  `ssl_dn` varchar(255) NOT NULL,
-    -- Client SSL certificate information: certificate serial + issuer DN
+    -- also used as key name in tokens
+  `public_key` varchar(1000) NOT NULL,
+    -- private key to decode signed tokens
   `restrict_paths` text NOT NULL,
     -- Paths to restrict execution of the tasks to, when they're sent by
     -- this platform
   `force_tag` int(11) NOT NULL DEFAULT '-1',
     -- Add a tag to all tasks sent by this platform
-  PRIMARY KEY (`id`)
+  `return_url` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `queue` (

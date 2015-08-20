@@ -1,0 +1,10 @@
+{
+   "require": {
+      "spomky-labs/jose": "=0.0.10",
+      "spomky-labs/jose-service": "~0.0.5",
+      "phpseclib/phpseclib": "~2.0.0",
+      "php": ">=5.4.0",
+      "lib-openssl": "*",
+      "lib-curl": "*"
+   }
+}

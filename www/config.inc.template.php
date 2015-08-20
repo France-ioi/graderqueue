@@ -13,6 +13,15 @@ $CFG_db_user = "";
 $CFG_db_password = "";
 $CFG_db_database = "";
 
+# Accepts token from interface.php? (see api.php, not suitable for production)
+$CFG_accept_interface_tokens = false;
+
+# public/private key for communication with the platforms
+# Communicate the key name and public key to the platforms you want to communicate with
+$CFG_key_name = "graderqueue.pem.dev";
+$CFG_private_key = "";
+$CFG_public_key = "";
+
 # Default language extensions
 $CFG_defaultexts = array(
     "[default]" => ".sh",

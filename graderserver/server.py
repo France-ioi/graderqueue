@@ -160,7 +160,7 @@ if __name__ == '__main__':
         if args.debug:
             print ''
             print '* Output from taskgrader'
-        proc = subprocess.Popen(['/usr/bin/python', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (procOut, procErr) = proc.communicate(input=json.dumps(taskdata))
 
         if args.debug:
