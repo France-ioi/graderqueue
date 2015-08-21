@@ -124,7 +124,7 @@ if __name__ == '__main__':
         # The Event allows to tell when a wakeup signal has been received
         wakeupEvent = threading.Event()
 
-        wakeupThread = threading.Thread(target=listenUdp, kwargs={'ev': wakeupEvent})
+        wakeupThread = threading.Thread(target=listenWakeup, kwargs={'ev': wakeupEvent})
         wakeupThread.setDaemon(True)
         wakeupThread.start()
 
