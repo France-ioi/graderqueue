@@ -66,16 +66,15 @@ function wake_up_server_by_type($typeids = array()) {
     SELECT servers.*,
       COUNT(queue.id) AS nbjobs
     FROM `servers`
-    LEFT JOIN queue ON queue.sent_to=servers.id
-    WHERE status='sent'";
+    LEFT JOIN queue ON queue.sent_to=servers.id AND queue.status='sent'";
   if(count($typeids) > 0) {
-    $query .= " AND type IN (" . implode(',', $typeids) . ")";
+    $query .= " WHERE servers.type IN (" . implode(',', $typeids) . ")";
   }
   $query .= " GROUP BY servers.id
     ORDER BY nbjobs DESC, last_poll_time DESC;";
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if(!($row['nbjobs'] < $row['max_concurrent_jobs'] or time()-strtotime($row['last_poll_time'] < 60)))
+    if($row['nbjobs'] < $row['max_concurrent_jobs'] or (time()-strtotime($row['last_poll_time'])) > 20)
     {
       # Need to wake this server up
       if(wake_up($row['wakeup_url'])) {
