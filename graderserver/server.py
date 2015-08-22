@@ -20,7 +20,7 @@ def listenWakeup(ev):
     wake-up signal."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
-    logging.info('Started listening for wake-up signals on %s:%s' % (CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
+    logging.info('Started listening for wake-up signals on udp://%s:%s' % (CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
 
     while True:
         (data, addr) = sock.recvfrom(1024)
@@ -161,12 +161,13 @@ if __name__ == '__main__':
         try:
             jsondata = json.loads(r)
         except:
-            logging.critical('Error: Taskqueue returned non-JSON data:')
-            logging.debug(r)
+            logging.critical('Error: Taskqueue returned non-JSON data.')
+            logging.debug('Received: %s' % r)
             sys.exit(1)
 
         if not jsondata.has_key('errorcode'):
             logging.critical('Error: Taskqueue returned data without errorcode.')
+            logging.debug('Received: %s' % r)
             sys.exit(1)
 
         # Handle various possible errors
@@ -205,7 +206,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         jobdata = jsondata['jobdata']
-        logging.info('Received job %s (#%d)' % (jsondata['jobname'], jsondata['jobid']))
+        logging.info('Received job `%s` (#%d)' % (jsondata['jobname'], jsondata['jobid']))
 
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
         if jobdata.has_key('restrictToPaths'):
@@ -214,13 +215,14 @@ if __name__ == '__main__':
         elif CFG_SERVER_RESTRICT:
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
-        logging.debug('* JSON sent to taskgrader:')
-        logging.debug(json.dumps(jobdata))
+        logging.debug('JSON sent to taskgrader: ```\n%s\n```' %json.dumps(jobdata))
     
         # Send to taskgrader
-        logging.debug('* Output from taskgrader')
         proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (procOut, procErr) = proc.communicate(input=json.dumps(jobdata))
+        logging.debug('* Output from taskgrader:')
+        logging.debug('stdout: ```\n%s\n```' % procOut)
+        logging.debug('stderr: ```\n%s\n```' % procErr)
 
         # Read taskgrader output
         try:
@@ -257,8 +259,6 @@ if __name__ == '__main__':
             logging.info("Sent results.")
         else:
             logging.info("Taskgrader error.")
-            logging.debug("stdout:\n" + procOut)
-            logging.debug("stderr:\n" + procErr)
 
             resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
                     {'jobid': jsondata['jobid'],

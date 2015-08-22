@@ -66,9 +66,10 @@ function wake_up_server_by_type($typeids = array()) {
     SELECT servers.*,
       COUNT(queue.id) AS nbjobs
     FROM `servers`
-    LEFT JOIN queue ON queue.sent_to=servers.id";
+    LEFT JOIN queue ON queue.sent_to=servers.id
+    WHERE status='sent'";
   if(count($typeids) > 0) {
-    $query .= " WHERE type IN (" . implode(',', $typeids) . ")";
+    $query .= " AND type IN (" . implode(',', $typeids) . ")";
   }
   $query .= " GROUP BY servers.id
     ORDER BY nbjobs DESC, last_poll_time DESC;";
