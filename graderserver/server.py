@@ -42,7 +42,7 @@ if __name__ == '__main__':
     argParser.add_argument('-d', '--debug', help='Shows all the JSON data in and out (implies -v)', action='store_true')
     argParser.add_argument('-D', '--daemon', help='Daemonize the process (incompatible with -v)', action='store_true')
     argParser.add_argument('-l', '--listen', help='Listen on UDP and wait for a wake-up signal', action='store_true')
-    argParser.add_argument('-L', '--logfile', help='Write logs into file LOGFILE', action='store', nargs=1, metavar='LOGFILE')
+    argParser.add_argument('-L', '--logfile', help='Write logs into file LOGFILE', action='store', metavar='LOGFILE')
     argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -D)', action='store_true')
     argParser.add_argument('-t', '--test', help='Test communication with the graderqueue (exits after testing)', action='store_true')
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
@@ -66,6 +66,12 @@ if __name__ == '__main__':
         'format': '%(asctime)s - graderserver - %(levelname)s - %(message)s'}
     if args.logfile: logConfig['filename'] = args.logfile
     logging.basicConfig(**logConfig)
+
+    if args.logfile and args.verbose:
+        # Also show messages on stderr
+        logStderr = logging.StreamHandler()
+        logStderr.setFormatter(logging.Formatter('%(asctime)s - graderserver - %(levelname)s - %(message)s'))
+        logging.getLogger().addHandler(logStderr)
 
     # HTTPS layer
     opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
