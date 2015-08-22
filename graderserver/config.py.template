@@ -7,11 +7,16 @@
 
 ##### START OF CONFIGURATION #####
 
-
 ### server.py configuration
 # Path to the taskgrader executable
 CFG_TASKGRADER = '/path/to/taskgrader.py'
 
+# Log file (when not specified on command-line)
+CFG_LOGFILE = None
+# Log level, must be 'CRITICAL', 'ERROR', 'WARNING', 'INFO' or 'DEBUG'
+CFG_LOGLEVEL = "WARNING"
+
+# PID file for server-mode
 CFG_SERVER_PIDFILE = '/path/to/pidfile'
 
 # URLs to the graderqueue

@@ -10,7 +10,7 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, os, socket, sys, subprocess, threading
+import argparse, json, logging, os, socket, sys, subprocess, threading
 import urllib, urllib2, urllib2_ssl
 from config import *
 
@@ -20,15 +20,19 @@ def listenWakeup(ev):
     wake-up signal."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
+    logging.info('Started listening for wake-up signals on %s:%s' % (CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
 
     while True:
         (data, addr) = sock.recvfrom(1024)
         # TODO :: Replace this by a real authentication
+        logging.debug('Wakeup listener received `%s` from %s' % (data, addr))
         if data == 'wakeup':
-            s.sendto('ok', addr)
+            logging.info('Received valid wake-up signal.')
+            sock.sendto('ok', addr)
             ev.set()
         else:
-            s.sendto('no', addr)
+            logging.info('Received invalid wake-up signal.')
+            sock.sendto('no', addr)
 
 
 if __name__ == '__main__':
@@ -38,7 +42,8 @@ if __name__ == '__main__':
     argParser.add_argument('-d', '--debug', help='Shows all the JSON data in and out (implies -v)', action='store_true')
     argParser.add_argument('-D', '--daemon', help='Daemonize the process (incompatible with -v)', action='store_true')
     argParser.add_argument('-l', '--listen', help='Listen on UDP and wait for a wake-up signal', action='store_true')
-    argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -Dl)', action='store_true')
+    argParser.add_argument('-L', '--logfile', help='Write logs into file LOGFILE', action='store', nargs=1, metavar='LOGFILE')
+    argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -D)', action='store_true')
     argParser.add_argument('-t', '--test', help='Test communication with the graderqueue (exits after testing)', action='store_true')
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
 
@@ -46,8 +51,21 @@ if __name__ == '__main__':
 
     # Some options imply others
     args.daemon = args.daemon or args.server
-    args.listen = args.listen or args.server
     args.verbose = args.verbose or args.debug
+
+    # Add configuration from config.py
+    if CFG_LOGFILE and not args.logfile:
+        args.logfile = CFG_LOGFILE
+
+    # Set logging options
+    logLevel = getattr(logging, CFG_LOGLEVEL, logging.CRITICAL)
+    if args.debug: logLevel = min(logLevel, logging.DEBUG)
+    if args.verbose: logLevel = min(logLevel, logging.INFO)
+
+    logConfig = {'level': logLevel,
+        'format': '%(asctime)s - graderserver - %(levelname)s - %(message)s'}
+    if args.logfile: logConfig['filename'] = args.logfile
+    logging.basicConfig(**logConfig)
 
     # HTTPS layer
     opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
@@ -61,8 +79,7 @@ if __name__ == '__main__':
         print "Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST
         r = opener.open(CFG_GRADERQUEUE_TEST).read()
 
-        if args.debug:
-            print "Received: %s" % r
+        logging.debug("Received: %s" % r)
 
         try:
             jsondata = json.loads(r)
@@ -79,7 +96,7 @@ if __name__ == '__main__':
 
 
     if args.daemon and args.verbose:
-        print "Can't daemonize while verbose mode is enabled."
+        logging.critical("Can't daemonize while verbose mode is enabled.")
         argParser.print_help()
         sys.exit(1)
 
@@ -133,22 +150,22 @@ if __name__ == '__main__':
         # Will terminate after a poll without any available job or an error
 
         # Request data from the graderqueue
-        if args.verbose: print 'Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL
+        logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
         r = opener.open(CFG_GRADERQUEUE_POLL).read()
         try:
             jsondata = json.loads(r)
         except:
-            print 'Error: Taskqueue returned non-JSON data.'
-            print r
+            logging.critical('Error: Taskqueue returned non-JSON data:')
+            logging.debug(r)
             sys.exit(1)
 
         if not jsondata.has_key('errorcode'):
-            print 'Error: Taskqueue returned data without errorcode.'
+            logging.critical('Error: Taskqueue returned data without errorcode.')
             sys.exit(1)
 
         # Handle various possible errors
         if jsondata['errorcode'] == 1:
-            if args.verbose: print 'Taskqueue has no available job.'
+            logging.info('Taskqueue has no available job.')
 
             if args.listen:
                 # Wait for a wake-up signal
@@ -156,29 +173,33 @@ if __name__ == '__main__':
                 while not wakeupEvent.wait(1):
                     # We use a timeout to keep the main thread responsive to interruptions
                     pass
-                if args.verbose: print 'Received wake-up signal.'
+                logging.info('Received wake-up signal.')
+                continue
+            elif args.server:
+                # Poll again
+                logging.info('Waiting 1 second before new poll...')
+                time.sleep(1)
                 continue
             else:
                 # We didn't receive any job, exit
-                if args.verbose: print "No job available, exiting."
+                logging.info("No job available, exiting.")
                 break
 
         elif jsondata['errorcode'] == 2:
-            print 'Error: Taskqueue returned an error (%s)' % jsondata['errormsg']
+            logging.critical('Error: Taskqueue returned an error (%s)' % jsondata['errormsg'])
             sys.exit(1)
         elif jsondata['errorcode'] == 3:
-            print 'Error: Authentication failed (%s)' % jsondata['errormsg']
+            logging.critical('Error: Authentication failed (%s)' % jsondata['errormsg'])
             sys.exit(1)
         elif jsondata['errorcode'] != 0:
-            print 'Error: Taskqueue returned an unknown errorcode (%s): %s' % (jsondata['errorcode'], jsondata['errormsg'])
+            logging.critical('Error: Taskqueue returned an unknown errorcode (%s): %s' % (jsondata['errorcode'], jsondata['errormsg']))
             sys.exit(1)
         elif not (jsondata.has_key('jobdata') and jsondata.has_key('jobname') and jsondata.has_key('jobid')):
-            print 'Error: Taskqueue returned no jobdata.'
+            logging.critical('Error: Taskqueue returned no jobdata.')
             sys.exit(1)
 
         jobdata = jsondata['jobdata']
-        if args.verbose:
-            print 'Received job %s (#%d)' % (jsondata['jobname'], jsondata['jobid'])
+        logging.info('Received job %s (#%d)' % (jsondata['jobname'], jsondata['jobid']))
 
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
         if jobdata.has_key('restrictToPaths'):
@@ -187,21 +208,13 @@ if __name__ == '__main__':
         elif CFG_SERVER_RESTRICT:
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
-        if args.debug:
-            print ''
-            print '* JSON sent to taskgrader:'
-            print json.dumps(jobdata)
+        logging.debug('* JSON sent to taskgrader:')
+        logging.debug(json.dumps(jobdata))
     
         # Send to taskgrader
-        if args.debug:
-            print ''
-            print '* Output from taskgrader'
+        logging.debug('* Output from taskgrader')
         proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (procOut, procErr) = proc.communicate(input=json.dumps(jobdata))
-
-        if args.debug:
-            print ''
-            print '* Results'
 
         # Read taskgrader output
         try:
@@ -210,45 +223,36 @@ if __name__ == '__main__':
             evalJson = None
 
         if evalJson:
-            if args.verbose:
-                print "Execution successful."
+            logging.info("Execution successful.")
+            for execution in evalJson['executions']:
+                logging.debug(' * Execution %s:' % execution['name'])
+                for report in execution['testsReports']:
+                    if report.has_key('checker'):
+                        # Everything was executed
+                        logging.info('Solution executed successfully.')
+                        logging.debug(report['checker']['stdout']['data'])
+                    elif report.has_key('execution'):
+                        # Solution error
+                        logging.info('Solution returned an error.')
+                        logging.debug(json.dumps(report['execution']))
+                    else:
+                        # Sanitizer error
+                        logging.info('Test rejected by sanitizer.')
+                        logging.debug(json.dumps(report['sanitizer']))
             if args.debug:
-                for execution in evalJson['executions']:
-                    print ' * Execution %s:' % execution['name']
-                    for report in execution['testsReports']:
-                        if report.has_key('checker'):
-                            # Everything was executed
-                            print 'Solution executed successfully. Checker report:'
-                            print report['checker']['stdout']['data']
-                        elif report.has_key('execution'):
-                            # Solution error
-                            print 'Solution returned an error. Solution report:'
-                            print json.dumps(report['execution'])
-                        else:
-                            # Sanitizer error
-                            print 'Test rejected by sanitizer. Sanitizer report:'
-                            print json.dumps(report['sanitizer'])
-            if args.debug:
-                print ''
-                print '* Full report:'
-                print json.dumps(evalJson)
+                logging.debug('* Full report:')
+                logging.debug(json.dumps(evalJson))
 
             # Send back results
             resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
                     {'jobid': jsondata['jobid'],
                      'resultdata': json.dumps({'errorcode': 0, 'jobdata': evalJson})})).read()
 
-            if args.verbose:
-                print "Sent results."
+            logging.info("Sent results.")
         else:
-            if args.verbose:
-                print "Taskgrader error."
-            if args.debug:
-                print "stdout:"
-                print procOut
-                print ""
-                print "stderr:"
-                print procErr
+            logging.info("Taskgrader error.")
+            logging.debug("stdout:\n" + procOut)
+            logging.debug("stderr:\n" + procErr)
 
             resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
                     {'jobid': jsondata['jobid'],
@@ -256,8 +260,7 @@ if __name__ == '__main__':
 
         try:
             respjson = json.loads(resp)
-            if args.verbose:
-                print "Taskqueue response: (%d) %s" % (respjson['errorcode'], respjson['errormsg'])
+            logging.info("Taskqueue response: (%d) %s" % (respjson['errorcode'], respjson['errormsg']))
         except:
-            print "Error: Taskqueue answered results with invalid data (%s)" % resp
+            logging.critical("Error: Taskqueue answered results with invalid data (%s)" % resp)
             sys.exit(1)
