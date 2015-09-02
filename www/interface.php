@@ -121,7 +121,7 @@ while($row = $res->fetch()) {
   echo "<td>";
   # Summary
   $resultdata = json_decode($row['resultdata'], true);
-  if($resultdata['errorcode'] > 0) {
+  if(isset($resultdata['errorcode']) && $resultdata['errorcode'] > 0) {
     echo "<a id=\"toggle" . $tid . "\" />";
     echo "<font color=\"darkred\">Error #" . $resultdata['errorcode'] . " received from server.</font><br />";
     echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</a><br />";
