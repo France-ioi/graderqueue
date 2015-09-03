@@ -5,6 +5,7 @@
 
 require("config.inc.php");
 
+# Get server data
 if($servdata = get_ssl_client_info('servers')) {
   # Client was identified by a SSL client certificate
   $server_id = $servdata['id'];
@@ -12,18 +13,11 @@ if($servdata = get_ssl_client_info('servers')) {
   die(jsonerror(3, "No valid authentication provided."));
 }
 
+# Validate sent information
 if(isset($_POST['jobid'])) {
   $job_id = intval($_POST['jobid']);
 } else {
   die(jsonerror(2, "No job ID sent."));
-}
-
-// get platform information
-$res = $db->prepare("SELECT platforms.* FROM `platforms` JOIN `queue` on queue.received_from = platforms.id WHERE queue.id = :jobid;");
-$res->execute(array(':jobid' => $job_id));
-$platform = $res->fetch();
-if (!$platform) {
-  die(jsonerror(2, "Cannot find platform corresponding to job ".$job_id));
 }
 
 if (!$_POST['resultdata']) {
@@ -38,19 +32,28 @@ try {
    die(jsonerror(2, "Cannot decode resultdata: ".$e->getMessage()));
 }
 
-
 # Isolate as a transaction
 $db->beginTransaction();
 
 # Check the server was sent this job
 $res = $db->prepare("SELECT * FROM `queue` WHERE status='sent' AND id=:jobid AND sent_to=:sid;");
 $res->execute(array(':jobid' => $job_id, ':sid' => $server_id));
-if(!$row = $res->fetch()) {
+if(!$jobrow = $res->fetch()) {
   db_log('error_not_assigned', $job_id, $server_id, '');
   $db->commit();
   die(jsonerror(2, "Task doesn't exist or server doesn't have this job assigned."));
 }
 
+
+// get platform information
+if($jobrow['received_from'] > 0) {
+  $res = $db->prepare("SELECT * FROM `platforms` WHERE id = :platid;");
+  $res->execute(array(':platid' => $jobrow['received_from']));
+  $platform = $res->fetch();
+  if (!$platform) {
+    die(jsonerror(2, "Cannot find platform corresponding to job ".$job_id));
+  }
+}
 
 
 if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
@@ -62,7 +65,6 @@ if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
     # Success!
     $stmt = $db->prepare("DELETE FROM `queue` WHERE id=:jobid;");
     $stmt->execute(array(':jobid' => $job_id));
-    $stmt = $db->prepare("UPDATE `servers` SET status='idle' WHERE id=:sid;");
     db_log('notice_recv_resultdata', $job_id, $server_id, '');
     echo jsonerror(0, "Saved resultdata.");
   } else {
@@ -72,12 +74,19 @@ if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
   }
   $db->commit();
 } else {
+  # Graderserver had an error, we save the job as having got an error
+  $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE id=:jobid;");
+  $stmt->execute(array(':jobid' => $job_id));
   db_log('error_in_result', $job_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();
   die(jsonerror(2, "Error received: ".$resultdata['errormsg']));
 }
 
-// send result to return_url:
+# If job was sent through interface, we're done
+if($jobrow['received_from'] <= 0) {
+  die();
+}
+// else send result to return_url:
 
 $tokenParams = array(
   'sTaskName' => $row['name'],

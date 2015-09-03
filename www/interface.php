@@ -121,16 +121,10 @@ while($row = $res->fetch()) {
   echo "<td>";
   # Summary
   $resultdata = json_decode($row['resultdata'], true);
-  if(isset($resultdata['errorcode']) && $resultdata['errorcode'] > 0) {
-    echo "<a id=\"toggle" . $tid . "\" />";
-    echo "<font color=\"darkred\">Error #" . $resultdata['errorcode'] . " received from server.</font><br />";
-    echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</a><br />";
-    echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $resultdata['errormsg'] . "</pre>";
-    $tid += 1;
-  } elseif(!isset($resultdata['jobdata'])) {
-    echo "Unrecognized resultdata, jobdata field missing.";
+  if(!isset($resultdata['executions'])) {
+    echo "Unrecognized resultdata, executions field missing.";
   } else {
-    foreach($resultdata['jobdata']['executions'] as $execution) {
+    foreach($resultdata['executions'] as $execution) {
       echo "*&nbsp;Execution&nbsp;" . $execution['name'] . "&nbsp;:<br />";
       foreach($execution['testsReports'] as $report) {
         if(isset($report['checker'])) {
