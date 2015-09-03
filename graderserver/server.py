@@ -157,7 +157,9 @@ if __name__ == '__main__':
 
         # Request data from the graderqueue
         logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
-        r = opener.open(CFG_GRADERQUEUE_POLL).read()
+        # nbtasks=0 means we don't currently have any tasks active
+        r = opener.open(CFG_GRADERQUEUE_POLL,
+                data=urllib.urlencode({'nbtasks': 0})).read()
         try:
             jsondata = json.loads(r)
         except:
