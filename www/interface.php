@@ -61,6 +61,16 @@ foreach($CFG_buttons as $bname => $bdata) {
 <div id="jobSendResult"></div>
 <a name="servers" />
 <?php
+
+if(isset($_GET['page'])) {
+  $curpage = max(1, intval($_GET['page']));
+} else {
+  $curpage = 1;
+}
+
+
+##### Servers
+
 echo "<h2>Servers</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>jobs</b></td><td><b>last_poll_time</b></td></tr>";
 $res = $db->query("
@@ -97,10 +107,17 @@ while($row = $res->fetch()) {
 
 echo "</table>";
 echo "<div id=\"serverResult\"></div>";
+
+
+##### Tasks done
+
 echo "<h2>Tasks done</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
-$res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC;");
+$res = $db->query("SELECT COUNT(*) FROM `done`;");
+$nbpages_done = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
+$res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
@@ -150,8 +167,25 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
+
+echo "<div>Pages: ";
+for($i=1; $i <= $nbpages_done; $i++) {
+  if($i == min($curpage, $nbpages_done)) {
+    echo "<b>$i</b>&nbsp;";
+  } else {
+    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
+  }
+}
+echo "</div>";
+
+##### Tasks
+
 echo "<h2>Tasks</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>jobdata</b></td></tr>";
+
+$res = $db->query("SELECT COUNT(*) FROM `queue`;");
+$nbpages_queue = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
 $res = $db->query("
   SELECT queue.*,
          GROUP_CONCAT(server_types.name SEPARATOR ',') AS types
@@ -159,7 +193,9 @@ $res = $db->query("
   LEFT JOIN job_types ON job_types.jobid=queue.id
   LEFT JOIN server_types ON server_types.id=job_types.typeid
   GROUP BY queue.id
-  ORDER BY priority DESC, received_time ASC;");
+  ORDER BY priority DESC, received_time ASC
+  LIMIT " . (min($curpage, $nbpages_queue)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . "
+  ;");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
@@ -191,9 +227,27 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
+
+echo "<div>Pages: ";
+for($i=1; $i <= $nbpages_queue; $i++) {
+  if($i == min($curpage, $nbpages_queue)) {
+    echo "<b>$i</b>&nbsp;";
+  } else {
+    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
+  }
+}
+echo "</div>";
+
+
+##### Log
+
 echo "<h2>Log</h2>";
 echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>job_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
-$res = $db->query("SELECT * FROM `log` ORDER BY datetime DESC;");
+
+$res = $db->query("SELECT COUNT(*) FROM `log`;");
+$nbpages_log = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
+$res = $db->query("SELECT * FROM `log` ORDER BY datetime DESC LIMIT " . (min($curpage, $nbpages_log)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
@@ -207,6 +261,17 @@ while($row = $res->fetch()) {
 
 echo "</table>";
 
+echo "<div>Pages: ";
+for($i=1; $i <= $nbpages_log; $i++) {
+  if($i == min($curpage, $nbpages_log)) {
+    echo "<b>$i</b>&nbsp;";
+  } else {
+    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
+  }
+}
+echo "</div>";
+
+##### Pretty-printed JSON
 ?>
 <a name="pretty" />
 <h2>Pretty-printed JSON</h2>

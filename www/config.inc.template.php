@@ -19,6 +19,9 @@ $CFG_max_fails = 2;
 # Accepts token from interface.php? (see api.php, not suitable for production)
 $CFG_accept_interface_tokens = false;
 
+# Number of results per page in interface.php
+$CFG_res_per_page = 10;
+
 # public/private key for communication with the platforms
 # Communicate the key name and public key to the platforms you want to communicate with
 $CFG_key_name = "graderqueue.pem.dev";
