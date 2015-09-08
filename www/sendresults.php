@@ -89,7 +89,7 @@ if($jobrow['received_from'] <= 0) {
 // else send result to return_url:
 
 $tokenParams = array(
-  'sTaskName' => $row['name'],
+  'sTaskName' => $jobrow['name'],
   'sResultData' => $resultdata['jobdata']
 );
 
