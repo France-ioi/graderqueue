@@ -55,12 +55,12 @@ while(time() - $start_time < 20) {
   # We select a job which can be sent to the server
   $queuelist = $db->prepare("SELECT * FROM `queue`
         WHERE sent_to!=:sid
+        AND nb_fails<:maxfails
         AND (
             status='queued' 
-            OR (timeout_time <= NOW() AND (
-                (status='sent' AND nb_fails<:maxfails)
-                OR status='waiting'
-        )))
+            OR (timeout_time <= NOW() AND
+                (status='sent' OR status='waiting'))
+        )
         AND EXISTS (SELECT 1 FROM job_types WHERE jobid=queue.id AND typeid=:typeid)
         ORDER BY priority DESC, received_time ASC
         LIMIT 1;");

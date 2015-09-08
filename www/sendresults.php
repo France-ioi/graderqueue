@@ -77,6 +77,8 @@ if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
   # Graderserver had an error, we save the job as having got an error
   $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE id=:jobid;");
   $stmt->execute(array(':jobid' => $job_id));
+  $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
+  $stmt->execute(array(':maxfails' => $CFG_max_fails));
   db_log('error_in_result', $job_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();
   die(jsonerror(2, "Error received: ".$resultdata['errormsg']));
