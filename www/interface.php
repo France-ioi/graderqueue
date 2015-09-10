@@ -120,7 +120,7 @@ $nbpages_done = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
-  echo "<td>" . $row['id'] . "</td>";
+  echo "<td>job #" . $row['jobid'] . "<br><i>(" . $row['id'] . ")</i></td>";
   echo "<td>" . $row['name'] . "</td>";
   echo "<td>" . $row['priority'] . "</td>";
   echo "<td>" . $row['timeout_sec'] . "s<br />";

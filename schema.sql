@@ -1,6 +1,9 @@
 CREATE TABLE IF NOT EXISTS `done` (
     -- Tasks done
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+    -- ID for the done table
+  `jobid` int(11) NOT NULL,
+    -- ID of the job (from the queue table)
   `name` varchar(255) NOT NULL,
   `priority` int(11) NOT NULL DEFAULT '0',
     -- Higher number = higher priority
@@ -28,7 +31,8 @@ CREATE TABLE IF NOT EXISTS `done` (
     -- return Url given by the platform
   `returnState` enum('notSent','sent','error') NOT NULL DEFAULT 'notSent',
     -- if return Url worked as expected
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `jobid` (`jobid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `log` (

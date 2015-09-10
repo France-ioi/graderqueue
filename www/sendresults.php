@@ -51,13 +51,14 @@ if($jobrow['received_from'] > 0) {
   $res->execute(array(':platid' => $jobrow['received_from']));
   $platform = $res->fetch();
   if (!$platform) {
+    $db->commit();
     die(jsonerror(2, "Cannot find platform corresponding to job ".$job_id));
   }
 }
 
 
 if(isset($resultdata['errorcode'])) {
-  $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata)
+  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata)
                  SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.jobdata, NOW(), :resultdata
                  FROM `queue`
                  WHERE id=:jobid;");

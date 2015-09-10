@@ -194,7 +194,7 @@ if(!isset($request['request'])) {
   }
 
   $stmt1 = $db->prepare("SELECT * FROM queue WHERE id = :id AND received_from = :recfrom;");
-  $stmt2 = $db->prepare("SELECT * FROM done WHERE id = :id AND received_from = :recfrom;");
+  $stmt2 = $db->prepare("SELECT * FROM done WHERE jobid = :id AND received_from = :recfrom;");
   $stmt1->execute(array(':id' => $jobid, ':recfrom' => $received_from));
   $stmt2->execute(array(':id' => $jobid, ':recfrom' => $received_from));
   if($row = $stmt1->fetch()) {
