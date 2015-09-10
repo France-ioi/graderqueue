@@ -136,11 +136,25 @@ while($row = $res->fetch()) {
   echo "sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['sent_time'] . "\">" . deltatime($row['received_time'], $row['sent_time']) . "</span><br />";
   echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['done_time'] . "\">" . deltatime($row['sent_time'], $row['done_time']) . "</span></td>";
   echo "<td>";
-  # Summary
+
+  # Summary of resultdata
   $resultdata = json_decode($row['resultdata'], true);
-  if(!isset($resultdata['executions'])) {
-    echo "Unrecognized resultdata, executions field missing.";
+
+  if(isset($resultdata['errorcode']) && $resultdata['errorcode'] > 0) {
+    # Show error
+    echo "<a id=\"toggle" . $tid . "\" />";
+    echo "<font color=\"darkred\">Error #" . $resultdata['errorcode'] . " received from server.</font><br />";
+    echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle message</a><br />";
+    echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $resultdata['errormsg'] . "</pre>";
+    $tid += 1;
   } else {
+    # No error
+    if(isset($resultdata['jobdata'])) {
+      $resultdata = $resultdata['jobdata'];
+    } else {
+      # Legacy code, could be deleted once development is done
+      echo "<i>(old-format resultdata)</i><br />";
+    }
     foreach($resultdata['executions'] as $execution) {
       echo "*&nbsp;Execution&nbsp;" . $execution['name'] . "&nbsp;:<br />";
       foreach($execution['testsReports'] as $report) {
