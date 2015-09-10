@@ -253,22 +253,30 @@ if __name__ == '__main__':
                 logging.debug('* Full report:')
                 logging.debug(json.dumps(evalJson))
 
-            # Send back results
-            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
-                    {'jobid': jsondata['jobid'],
-                     'resultdata': json.dumps({'errorcode': 0, 'jobdata': evalJson})})).read()
+            # Make data to send back
+            respData = {'jobid': jsondata['jobid'],
+                    'resultdata': json.dumps({'errorcode': 0, 'jobdata': evalJson})}
 
-            logging.info("Sent results.")
         else:
             logging.info("Taskgrader error.")
 
-            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(
-                    {'jobid': jsondata['jobid'],
-                     'resultdata': json.dumps({'errorcode': 2, 'errormsg': "stdout:\n%s\nstderr:\n%s" % (procOut, procErr)})})).read()
+            # Send back the error
+            respData = {'jobid': jsondata['jobid'],
+                    'resultdata': json.dumps({'errorcode': 2, 'errormsg': "stdout:\n%s\nstderr:\n%s" % (procOut, procErr)})}
 
-        try:
-            respjson = json.loads(resp)
-            logging.info("Taskqueue response: (%d) %s" % (respjson['errorcode'], respjson['errormsg']))
-        except:
-            logging.critical("Error: Taskqueue answered results with invalid data (%s)" % resp)
-            sys.exit(1)
+        respTries = 0
+        while respTries < 3:
+            # Send back results
+            logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
+            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(respData)).read()
+            logging.info("Sent results.")
+            try:
+                respJson = json.loads(resp)
+                logging.info("Taskqueue response: (%d) %s" % (respJson['errorcode'], respJson['errormsg']))
+                if respJson['errorcode'] == 0:
+                    break
+            except:
+                logging.critical("Error: Taskqueue answered results with invalid data (%s)" % resp)
+            respTries += 1
+            logging.debug("Waiting 3 seconds before retrying...")
+            time.sleep(3)

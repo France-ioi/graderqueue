@@ -56,32 +56,35 @@ if($jobrow['received_from'] > 0) {
 }
 
 
-if(isset($resultdata['errorcode']) && $resultdata['errorcode'] == 0) {
+if(isset($resultdata['errorcode'])) {
   $stmt = $db->prepare("INSERT INTO `done` (id, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata)
                  SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.jobdata, NOW(), :resultdata
                  FROM `queue`
                  WHERE id=:jobid;");
-  if($stmt->execute(array(':resultdata' => json_encode($resultdata['jobdata']), ':jobid' => $job_id))) {
+  if($stmt->execute(array(':resultdata' => json_encode($resultdata), ':jobid' => $job_id))) {
     # Success!
     $stmt = $db->prepare("DELETE FROM `queue` WHERE id=:jobid;");
     $stmt->execute(array(':jobid' => $job_id));
     db_log('notice_recv_resultdata', $job_id, $server_id, '');
+    $db->commit();
     echo jsonerror(0, "Saved resultdata.");
   } else {
     # Error while saving results
     db_log('error_saving_resultdata', $job_id, $server_id, '');
-    echo jsonerror(2, "Error saving resultdata.");
+    $db->commit();
+    # We send a code of one to tell the server to try again
+    die(jsonerror(1, "Error saving resultdata."));
   }
-  $db->commit();
 } else {
-  # Graderserver had an error, we save the job as having got an error
+  # We received JSON data without errorcode, so probably not good data, we'll
+  # just send the task again...
   $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE id=:jobid;");
   $stmt->execute(array(':jobid' => $job_id));
   $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
   $stmt->execute(array(':maxfails' => $CFG_max_fails));
   db_log('error_in_result', $job_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();
-  die(jsonerror(2, "Error received: ".$resultdata['errormsg']));
+  die(jsonerror(2, "Resultdata received invalid."));
 }
 
 # If job was sent through interface, we're done
