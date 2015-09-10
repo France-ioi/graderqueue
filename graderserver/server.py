@@ -256,7 +256,7 @@ if __name__ == '__main__':
 
             # Make data to send back
             respData = {'jobid': jsondata['jobid'],
-                    'resultdata': json.dumps({'errorcode': 0, 'jobdata': evalJson})}
+                    'resultdata': json.dumps({'errorcode': 0, 'errormsg': "Success", 'jobdata': evalJson})}
 
         else:
             logging.info("Taskgrader error.")

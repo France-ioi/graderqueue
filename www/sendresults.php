@@ -73,7 +73,7 @@ if(isset($resultdata['errorcode'])) {
     db_log('error_saving_resultdata', $job_id, $server_id, '');
     $db->commit();
     # We send a code of one to tell the server to try again
-    die(jsonerror(1, "Error saving resultdata."));
+    die(jsonerror(1, "Error saving resultdata: " . $stmt->errorInfo()[2]));
   }
 } else {
   # We received JSON data without errorcode, so probably not good data, we'll
