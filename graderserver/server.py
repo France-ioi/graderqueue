@@ -256,15 +256,28 @@ if __name__ == '__main__':
 
             # Make data to send back
             respData = {'jobid': jsondata['jobid'],
-                    'resultdata': json.dumps({'errorcode': 0, 'errormsg': "Success", 'jobdata': evalJson})}
+                    'resultdata': json.dumps({
+                        'errorcode': 0,
+                        'errormsg': "Success",
+                        'jobdata': evalJson})}
 
         else:
             logging.info("Taskgrader error.")
 
+            # errorCode = 1 means general error, abandon // 2 means temporary error, retry
+            errorCode = max(1, proc.returncode)
+            if errorCode == 1:
+                errorMsg = "Fatal error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
+            elif errorCode == 2:
+                errorMsg = "Temporary error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
+
             # Send back the error
             respData = {'jobid': jsondata['jobid'],
-                    'resultdata': json.dumps({'errorcode': 2, 'errormsg': "stdout:\n%s\nstderr:\n%s" % (procOut, procErr)})}
+                    'resultdata': json.dumps({
+                        'errorcode': errorCode,
+                        'errormsg': errorMsg})}
 
+        # Try multiple times to send back results
         respTries = 0
         while respTries < 3:
             # Send back results
