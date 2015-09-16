@@ -6,10 +6,12 @@
 require("config.inc.php");
 
 # Token for the API
-$token = md5(microtime());
+if($CFG_accept_interface_tokens) {
+  $token = md5(microtime());
 
-$stmt = $db->prepare("INSERT INTO `tokens` VALUES(:token, NOW()+INTERVAL 10 MINUTE);");
-$stmt->execute(array(':token' => $token));
+  $stmt = $db->prepare("INSERT INTO `tokens` VALUES(:token, NOW()+INTERVAL 10 MINUTE);");
+  $stmt->execute(array(':token' => $token));
+}
 
 $tid = 0;
 ?>
@@ -28,6 +30,9 @@ $tid = 0;
 <body>
 <a name="form" />
 <h2>Send job</h2>
+<?php
+if($CFG_accept_interface_tokens) {
+?>
 <div>
 <form enctype="multipart/form-data" action="api.php" id="jobSend">
 Solution : <input type="file" name="solfile" /> <i>or</i> path <input type="text" name="solpath" /> <i>or</i> <a onclick="$('#solcontentarea').toggle();" href="#form">content</a><br />
@@ -43,22 +48,27 @@ Token : <input type="text" name="token" value="<?=$token ?>" />
 </form></div>
 <div>Test jobs :
 <?php
-$bid = 0;
-$buttonsData = "";
-foreach($CFG_buttons as $bname => $bdata) {
-  $bmergeddata = array_merge($CFG_defaultbutton, $bdata);
-  echo " <button type=\"button\" onclick=\"sendPath(" . $bid . ")\">" . $bname . "</button>";
-  $buttonsData .= "buttonsData[" . $bid . "] = {";
-  $buttonsData .= "request: \"sendsolution\",";
-  foreach($bmergeddata as $idx => $val) {
-    $buttonsData .= $idx . ": \"" . $val . "\",";
+  $bid = 0;
+  $buttonsData = "";
+  foreach($CFG_buttons as $bname => $bdata) {
+    $bmergeddata = array_merge($CFG_defaultbutton, $bdata);
+    echo " <button type=\"button\" onclick=\"sendPath(" . $bid . ")\">" . $bname . "</button>";
+    $buttonsData .= "buttonsData[" . $bid . "] = {";
+    $buttonsData .= "request: \"sendsolution\",";
+    foreach($bmergeddata as $idx => $val) {
+      $buttonsData .= $idx . ": \"" . $val . "\",";
+    }
+    $buttonsData .= "};\n";
+    $bid += 1;
   }
-  $buttonsData .= "};\n";
-  $bid += 1;
-}
 ?>
 </div>
 <div id="jobSendResult"></div>
+<?php
+} else {
+  echo "<div><i>Disabled. Set \$CFG_accept_interface_tokens to true in config.inc.php to enable.</i></div>";
+}
+?>
 <a name="servers" />
 <?php
 
