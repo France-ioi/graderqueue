@@ -21,7 +21,10 @@ with any program using JSON to describe jobs and results.
 * Secure or disable access to `interface.php` with your favorite method, for instance with the `htaccess` file in the `examples` folder.
 
 ## Configuration
-The file `config.inc.php` contains the database access configuration.
+The file `config.inc.php` contains various configuration options.
+
+The script `cron.php` needs to be executed regularly to delete old tasks and
+send warnings to the admin.
 
 Once the database is set up, platforms, servers, server types and tags need to
 be configured.

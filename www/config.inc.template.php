@@ -7,7 +7,7 @@ require("funcs.inc.php");
 
 ### Configuration
 
-# Database parameters
+## Database parameters
 $CFG_db_hostname = "";
 $CFG_db_user = "";
 $CFG_db_password = "";
@@ -16,17 +16,34 @@ $CFG_db_database = "";
 # Number of server failures before considering a task as in error
 $CFG_max_fails = 2;
 
-# Accepts token from interface.php? (see api.php, not suitable for production)
-$CFG_accept_interface_tokens = false;
-
-# Number of results per page in interface.php
-$CFG_res_per_page = 10;
 
 # public/private key for communication with the platforms
 # Communicate the key name and public key to the platforms you want to communicate with
 $CFG_key_name = "graderqueue.pem.dev";
 $CFG_private_key = "";
 $CFG_public_key = "";
+
+
+## cron.php
+# E-mail address to send warnings to
+$CFG_admin_email = '';
+# URL to the interface (to include link in the mail)
+$CFG_interface_url = "https://example.com/interface.php";
+# Number of hours between two cron.php executions
+$CFG_cron_interval_hours = 24;
+# Number of hours before warning about a task stuck or in error
+$CFG_warn_hours = 1;
+# Number of days to keep old tasks and logs for
+# All tasks and logs older than this setting will be deleted, regardless or their status
+$CFG_keep_old_days = 7;
+
+
+## interface.php
+# Accepts token from interface.php? (see api.php, not suitable for production)
+$CFG_accept_interface_tokens = false;
+
+# Number of results per page in interface.php
+$CFG_res_per_page = 10;
 
 # Default language extensions
 $CFG_defaultexts = array(
