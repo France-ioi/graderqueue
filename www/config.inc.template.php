@@ -3,7 +3,7 @@
 #
 # http://opensource.org/licenses/MIT
 
-require("funcs.inc.php");
+require __DIR__."/funcs.inc.php";
 
 ### Configuration
 

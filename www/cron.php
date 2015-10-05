@@ -3,7 +3,7 @@
 #
 # http://opensource.org/licenses/MIT
 
-require('config.inc.php');
+require __DIR__.'/config.inc.php';
 
 # Delete old tasks and logs
 $stmt = $db->prepare("DELETE FROM `tasks` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day);");

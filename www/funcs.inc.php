@@ -3,7 +3,7 @@
 #
 # http://opensource.org/licenses/MIT
 
-require_once "../vendor/autoload.php";
+require_once __DIR__."/../vendor/autoload.php";
 
 function deltatime($start, $end) {
   # Returns a string corresponding to the time delta between two datetimes
