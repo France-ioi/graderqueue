@@ -36,6 +36,20 @@ def listenWakeup(ev):
             sock.sendto('no', addr)
 
 
+def communicateWithTimeout(subProc, timeout=0, input=None):
+    """Communicates with subProc until its completion or timeout seconds,
+    whichever comes first."""
+    if timeout > 0:
+        to = threading.Timer(timeout, subProc.kill)
+        try:
+            to.start()
+            return subProc.communicate(input=input)
+        finally:
+            to.cancel()
+    else:
+        return subProc.communicate(input=input)
+
+
 if __name__ == '__main__':
     # Read command line options
     argParser = argparse.ArgumentParser(description="Launches an evaluation server for use with the graderQueue.")
@@ -222,7 +236,7 @@ if __name__ == '__main__':
     
         # Send to taskgrader
         proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (procOut, procErr) = proc.communicate(input=json.dumps(jobdata))
+        (procOut, procErr) = communicateWithTimeout(proc, timeout=CFG_TIMEOUT, input=json.dumps(jobdata))
         logging.debug('* Output from taskgrader:')
         logging.debug('stdout: ```\n%s\n```' % procOut)
         logging.debug('stderr: ```\n%s\n```' % procErr)
