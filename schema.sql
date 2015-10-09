@@ -108,6 +108,8 @@ CREATE TABLE IF NOT EXISTS `servers` (
     -- Client SSL certificate information: certificate serial + issuer DN
   `wakeup_url` text NOT NULL,
     -- URL to access to wakeup the server
+  `wakeup_fails` int(11) NOT NULL DEFAULT '0',
+    -- Number of wakeup failures since last poll
   `type` int(11) NOT NULL,
     -- Type of the server (check `server_types` table)
   `max_concurrent_jobs` int(11) NOT NULL DEFAULT '1',

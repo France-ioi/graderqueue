@@ -78,9 +78,13 @@ function wake_up_server_by_type($typeids = array()) {
     {
       # Need to wake this server up
       if(wake_up($row['wakeup_url'])) {
+        $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
+        $stmt->execute(array(':sid' => $row['id']));
         return True;
-      }
-      # If failed we'll try the next server
+      } else {
+        $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
+        $stmt->execute(array(':sid' => $row['id']));
+      } # If failed we'll try the next server
     }
   }
   return False;
@@ -92,7 +96,15 @@ function wake_up_server_by_id($sid) {
   $stmt = $db->prepare("SELECT wakeup_url FROM `servers` WHERE id=:sid;");
   $stmt->execute(array(':sid' => $sid));
   if($row = $stmt->fetch()) {
-    return wake_up($row['wakeup_url']);
+    if(wake_up($row['wakeup_url'])) {
+      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
+      $stmt->execute(array(':sid' => $sid));
+      return True;
+    } else {
+      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
+      $stmt->execute(array(':sid' => $sid));
+      return False;
+    }
   } else {
     return False;
   }

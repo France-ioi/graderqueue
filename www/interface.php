@@ -111,7 +111,11 @@ while($row = $res->fetch()) {
   }
   echo "<td>" . $row['ssl_serial'] . "</td>";
   echo "<td>" . $row['ssl_dn'] . "</td>";
-  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a></td>";
+  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a>";
+  if($row['wakeup_fails'] > 0) {
+    echo "&nbsp;<font color=\"red\"><i>(" . $row['wakeup_fails'] . " recent failures)</i<</font>";
+  }
+  echo "</td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
   echo "<td>" . $row['nbjobs'] . " / " . $row['max_concurrent_jobs'] . "</td>";
   echo "<td>" . $row['last_poll_time'] . "</td>";
