@@ -59,7 +59,8 @@ if __name__ == '__main__':
     argParser.add_argument('-l', '--listen', help='Listen on UDP and wait for a wake-up signal', action='store_true')
     argParser.add_argument('-L', '--logfile', help='Write logs into file LOGFILE', action='store', metavar='LOGFILE')
     argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -D)', action='store_true')
-    argParser.add_argument('-t', '--test', help='Test communication with the graderqueue (exits after testing)', action='store_true')
+    argParser.add_argument('-t', '--testconnection', help='Test connection with the graderqueue (exits after testing)', action='store_true')
+    argParser.add_argument('-T', '--testbehavior', help='Test the graderqueue through different behaviors', default=0, type=int, choices=xrange(0, 7))
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
 
     args = argParser.parse_args()
@@ -96,7 +97,7 @@ if __name__ == '__main__':
             checker=CFG_SSL_CHECKER))
 
     # Test mode: try communicating with the graderqueue
-    if args.test:
+    if args.testconnection:
         print "Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST
         r = opener.open(CFG_GRADERQUEUE_TEST).read()
 
@@ -225,6 +226,15 @@ if __name__ == '__main__':
         jobdata = jsondata['jobdata']
         logging.info('Received job `%s` (#%d)' % (jsondata['jobname'], jsondata['jobid']))
 
+        if args.testbehavior == 1:
+            # Test behavior: don't send back any results, poll again right away
+            logging.info('Test behavior 1; dropping job, starting new poll...')
+            continue
+        elif args.testbehavior == 2:
+            # Test behavior: wait 60 seconds before executing evaluation
+            logging.info('Test behavior 2; waiting 60 seconds...')
+            time.sleep(60)
+
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
         if jobdata.has_key('restrictToPaths'):
             jobdata['restrictToPaths'] = map(lambda p: Template(p).safe_substitute(CFG_GRADERQUEUE_VARS), jobdata['restrictToPaths'])
@@ -232,10 +242,17 @@ if __name__ == '__main__':
         elif CFG_SERVER_RESTRICT:
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
-        logging.debug('JSON sent to taskgrader: ```\n%s\n```' %json.dumps(jobdata))
-    
+        logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' %json.dumps(jobdata))
+
+        # Command-line to execute as taskgrader
+        cmdline = ['/usr/bin/python2', CFG_TASKGRADER]
+        if args.testbehavior == 6:
+            # Test behavior 6: set results as input JSON
+            logging.info("Test behavior 6; using cat as taskgrader...")
+            cmdline = ['/bin/cat']
+
         # Send to taskgrader
-        proc = subprocess.Popen(['/usr/bin/python2', CFG_TASKGRADER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (procOut, procErr) = communicateWithTimeout(proc, timeout=CFG_TIMEOUT, input=json.dumps(jobdata))
         logging.debug('* Output from taskgrader:')
         logging.debug('stdout: ```\n%s\n```' % procOut)
@@ -249,21 +266,25 @@ if __name__ == '__main__':
 
         if evalJson:
             logging.info("Execution successful.")
-            for execution in evalJson['executions']:
-                logging.debug(' * Execution %s:' % execution['name'])
-                for report in execution['testsReports']:
-                    if report.has_key('checker'):
-                        # Everything was executed
-                        logging.info('Solution executed successfully.')
-                        logging.debug(report['checker']['stdout']['data'])
-                    elif report.has_key('execution'):
-                        # Solution error
-                        logging.info('Solution returned an error.')
-                        logging.debug(json.dumps(report['execution']))
-                    else:
-                        # Sanitizer error
-                        logging.info('Test rejected by sanitizer.')
-                        logging.debug(json.dumps(report['sanitizer']))
+            # Log a summary of the execution results
+            try:
+                for execution in evalJson['executions']:
+                    logging.debug(' * Execution %s:' % execution['name'])
+                    for report in execution['testsReports']:
+                        if report.has_key('checker'):
+                            # Everything was executed
+                            logging.info('Solution executed successfully.')
+                            logging.debug(report['checker']['stdout']['data'])
+                        elif report.has_key('execution'):
+                            # Solution error
+                            logging.info('Solution returned an error.')
+                            logging.debug(json.dumps(report['execution']))
+                        else:
+                            # Sanitizer error
+                            logging.info('Test rejected by sanitizer.')
+                            logging.debug(json.dumps(report['sanitizer']))
+            except:
+                pass
             if args.debug:
                 logging.debug('* Full report:')
                 logging.debug(json.dumps(evalJson))
@@ -290,6 +311,19 @@ if __name__ == '__main__':
                     'resultdata': json.dumps({
                         'errorcode': errorCode,
                         'errormsg': errorMsg})}
+
+        if args.testbehavior == 3:
+            # Test behavior 3: report results as a fatal error
+            logging.info("Test behavior 3; reporting results as a fatal error...")
+            respData['resultdata']['errorcode'] = 1
+        elif args.testbehavior == 4:
+            # Test behavior 4: report results as a temporary error
+            logging.info("Test behavior 4; reporting results as a fatal error...")
+            respData['resultdata']['errorcode'] = 2
+        elif args.testbehavior == 5:
+            # Test behavior 5: report erroneous results
+            logging.info("Test behavior 5; removing resultdata from the results sent back...")
+            respData = {'jobid': respData['jobid']}
 
         # Try multiple times to send back results
         respTries = 0
