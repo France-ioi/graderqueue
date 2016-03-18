@@ -5,6 +5,16 @@
 
 require_once __DIR__."/../vendor/autoload.php";
 
+use Jose\Factory\DecrypterFactory;
+use Jose\Factory\VerifierFactory;
+use Jose\Factory\JWKFactory;
+use Jose\Loader;
+use Jose\Object\JWKSet;
+use Jose\Factory\EncrypterFactory;
+use Jose\Factory\SignerFactory;
+use Jose\Factory\JWSFactory;
+use Jose\Factory\JWEFactory;
+
 function deltatime($start, $end) {
   # Returns a string corresponding to the time delta between two datetimes
   $delta = strtotime($end) - strtotime($start);
@@ -172,23 +182,23 @@ function get_token_client_info() {
     return null;
   }
 
-  // basic jwe configuration (must be the same on both sides!)
-  $jose = SpomkyLabs\Service\Jose::getInstance();
-  $jose->getConfiguration()->set('Compression', array('DEF'));
-  $jose->getConfiguration()->set('Algorithms', array(
-    'A256CBC-HS512',
-    'RSA-OAEP-256',
-    'RS512'
-  ));
-
   // actually decrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_public($platform['public_key']));
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
+  $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
+  $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
   try {
-    $jws = $jose->load($_POST['sToken'])->getPayload();
-    $params = $jose->load($jws)->getPayload();
+    $jws = Loader::load($_POST['sToken']);
+    $decrypter = DecrypterFactory::createDecrypter(['A256CBC-HS512','RSA-OAEP-256']);
+    $decrypter->decryptUsingKey($jws, $privateKey);
+    $jws = $jws->getPayLoad();
+    $res = Loader::load($jws);
+    $verifier = VerifierFactory::createVerifier(['RS512']);
+    $valid_signature = $verifier->verifyWithKey($res, $publicKey);
+    if ($valid_signature === false) {
+       throw new Exception('Signature cannot be validated, please check your SSL keys');
+    }
+    $params = $res->getPayload();
   } catch (Exception $e) {
-    die(jsonerror(2, "Invalid token."));
+    die(jsonerror(2, "Invalid token: ".$e->getMessage()));
   }
   return array($platform, $params);
 }
@@ -196,31 +206,28 @@ function get_token_client_info() {
 function encode_params_in_token($params, $platform) {
   global $CFG_private_key, $CFG_key_name;
   $params['date'] = date('d-m-Y');
-  // basic jwe configuration (must be the same on both sides!)
-  $jose = SpomkyLabs\Service\Jose::getInstance();
-  $jose->getConfiguration()->set('Compression', array('DEF'));
-  $jose->getConfiguration()->set('Algorithms', array(
-    'A256CBC-HS512',
-    'RSA-OAEP-256',
-    'RS512'
-  ));
 
-  // actually encrypting token
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($platform['name'], openssl_pkey_get_public($platform['public_key']));
-  $jose->getKeyManager()->addRSAKeyFromOpenSSLResource($CFG_key_name, openssl_pkey_get_private($CFG_private_key));
-  $jws = $jose->sign(
-    $CFG_key_name,
-    $params,
-    array(
-      "alg" => "RS512",
-      "kid" => $CFG_key_name,
-    )
+  $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
+  $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
+
+  $jws = JWSFactory::createJWS($params);
+  $signer = SignerFactory::createSigner(['RS512']);
+  $signer->addSignature(
+     $jws,
+     $privateKey,
+     ['alg' => 'RS512']
   );
-  $jwe = $jose->encrypt($platform['name'], $jws, array(
-      'alg' => 'RSA-OAEP-256',
-      'enc' => 'A256CBC-HS512',
-      'kid' => $platform['name'],
-      'zip' => 'DEF',
-  ));
-  return $jwe;
+  $jws = $jws->toCompactJSON(0);
+
+  $jwe = JWEFactory::createJWE(
+     $jws,
+     [
+        'alg' => 'RSA-OAEP-256',
+        'enc' => 'A256CBC-HS512',
+        'zip' => 'DEF',
+     ]
+  );
+  $encrypter = EncrypterFactory::createEncrypter(['RSA-OAEP-256','A256CBC-HS512']);
+  $encrypter->addRecipient($jwe, $publicKey);
+  return $jwe->toCompactJSON(0);
 }

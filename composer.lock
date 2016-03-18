@@ -4,20 +4,74 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "e2de89c8edff8e9b8fe566a96521d160",
+    "hash": "1bec7fc6782209f38344da1ffa0331e7",
+    "content-hash": "7074f1cdb2bf1f3e807435e98d252f1b",
     "packages": [
         {
-            "name": "phpseclib/phpseclib",
-            "version": "2.0.0",
+            "name": "beberlei/assert",
+            "version": "v2.4",
             "source": {
                 "type": "git",
-                "url": "https://github.com/phpseclib/phpseclib.git",
-                "reference": "a74aa9efbe61430fcb60157c8e025a48ec8ff604"
+                "url": "https://github.com/beberlei/assert.git",
+                "reference": "7281b1fd8118b31cb9162c2fb5a4cc6f01d62ed6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/a74aa9efbe61430fcb60157c8e025a48ec8ff604",
-                "reference": "a74aa9efbe61430fcb60157c8e025a48ec8ff604",
+                "url": "https://api.github.com/repos/beberlei/assert/zipball/7281b1fd8118b31cb9162c2fb5a4cc6f01d62ed6",
+                "reference": "7281b1fd8118b31cb9162c2fb5a4cc6f01d62ed6",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": ">=5.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "@stable"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.3-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Assert": "lib/"
+                },
+                "files": [
+                    "lib/Assert/functions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-2-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Benjamin Eberlei",
+                    "email": "kontakt@beberlei.de"
+                }
+            ],
+            "description": "Thin assertion library for input validation in business models.",
+            "keywords": [
+                "assert",
+                "assertion",
+                "validation"
+            ],
+            "time": "2015-08-21 16:50:17"
+        },
+        {
+            "name": "phpseclib/phpseclib",
+            "version": "2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpseclib/phpseclib.git",
+                "reference": "ba6fb78f727cd09f2a649113b95468019e490585"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/ba6fb78f727cd09f2a649113b95468019e490585",
+                "reference": "ba6fb78f727cd09f2a649113b95468019e490585",
                 "shasum": ""
             },
             "require": {
@@ -33,8 +87,7 @@
                 "ext-gmp": "Install the GMP (GNU Multiple Precision) extension in order to speed up arbitrary precision integer arithmetic operations.",
                 "ext-libsodium": "SSH2/SFTP can make use of some algorithms provided by the libsodium-php extension.",
                 "ext-mcrypt": "Install the Mcrypt extension in order to speed up a few other cryptographic operations.",
-                "ext-openssl": "Install the OpenSSL extension in order to speed up a wide variety of cryptographic operations.",
-                "pear-pear/PHP_Compat": "Install PHP_Compat to get phpseclib working on PHP < 5.0.0."
+                "ext-openssl": "Install the OpenSSL extension in order to speed up a wide variety of cryptographic operations."
             },
             "type": "library",
             "autoload": {
@@ -43,9 +96,6 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                "phpseclib/"
-            ],
             "license": [
                 "MIT"
             ],
@@ -68,6 +118,11 @@
                 {
                     "name": "Hans-Jürgen Petrich",
                     "email": "petrich@tronic-media.com",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Graham Campbell",
+                    "email": "graham@alt-three.com",
                     "role": "Developer"
                 }
             ],
@@ -92,34 +147,43 @@
                 "x.509",
                 "x509"
             ],
-            "time": "2015-08-04 04:48:03"
+            "time": "2016-01-18 17:07:21"
         },
         {
-            "name": "pimple/pimple",
-            "version": "v3.0.1",
+            "name": "spomky-labs/aes-key-wrap",
+            "version": "v2.0.4",
             "source": {
                 "type": "git",
-                "url": "https://github.com/silexphp/Pimple.git",
-                "reference": "3313af5935dbc560fab845b76a1ca351b47855af"
+                "url": "https://github.com/Spomky-Labs/aes-key-wrap.git",
+                "reference": "237a7d0129cbf713d365ef6661d2e010c62856d6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/silexphp/Pimple/zipball/3313af5935dbc560fab845b76a1ca351b47855af",
-                "reference": "3313af5935dbc560fab845b76a1ca351b47855af",
+                "url": "https://api.github.com/repos/Spomky-Labs/aes-key-wrap/zipball/237a7d0129cbf713d365ef6661d2e010c62856d6",
+                "reference": "237a7d0129cbf713d365ef6661d2e010c62856d6",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3.0"
+                "beberlei/assert": "^2.0",
+                "php": ">=5.4"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.5.0|^5.0.0",
+                "satooshi/php-coveralls": "^1.0.0"
+            },
+            "suggest": {
+                "ext-mcrypt": "Install MCrypt extension. If OpenSSL is installed, MCrypt is ignored. OpenSSL or MCrypt extension is required.",
+                "lib-openssl": "Install OpenSSL extension if you want to use OpenSSL instead of MCrypt"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0.x-dev"
+                    "dev-master": "2.0.x-dev"
                 }
             },
             "autoload": {
-                "psr-0": {
-                    "Pimple": "src/"
+                "psr-4": {
+                    "AESKW\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -128,47 +192,55 @@
             ],
             "authors": [
                 {
-                    "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
+                    "name": "Florent Morselli",
+                    "homepage": "https://github.com/Spomky-Labs/aes-key-wrap/contributors"
                 }
             ],
-            "description": "Pimple is a simple Dependency Injection Container for PHP 5.3",
-            "homepage": "http://pimple.sensiolabs.org",
+            "description": "AES Kew Wrap for PHP.",
+            "homepage": "https://github.com/Spomky-Labs/aes-key-wrap",
             "keywords": [
-                "container",
-                "dependency injection"
+                "A128KW",
+                "A192KW",
+                "A256KW",
+                "RFC3394",
+                "RFC5649",
+                "aes",
+                "key",
+                "padding",
+                "wrap"
             ],
-            "time": "2015-07-30 09:57:46"
+            "time": "2016-03-03 12:07:19"
         },
         {
             "name": "spomky-labs/base64url",
-            "version": "v0.0.3",
+            "version": "v1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Spomky-Labs/base64url.git",
-                "reference": "d46ea45c1306223d88e230607ad295dc20930203"
+                "reference": "ef6d5fb93894063d9cee996022259fd08d6646ea"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Spomky-Labs/base64url/zipball/d46ea45c1306223d88e230607ad295dc20930203",
-                "reference": "d46ea45c1306223d88e230607ad295dc20930203",
+                "url": "https://api.github.com/repos/Spomky-Labs/base64url/zipball/ef6d5fb93894063d9cee996022259fd08d6646ea",
+                "reference": "ef6d5fb93894063d9cee996022259fd08d6646ea",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3"
+                "php": "^5.3|^7.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "~4.0"
+                "phpunit/phpunit": "^4.0|^5.0",
+                "satooshi/php-coveralls": "^1.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "0.0.x-dev"
+                    "dev-master": "1.0.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Base64Url\\": "lib/"
+                    "Base64Url\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -189,53 +261,48 @@
                 "safe",
                 "url"
             ],
-            "time": "2015-01-23 13:02:05"
+            "time": "2016-01-21 19:50:30"
         },
         {
             "name": "spomky-labs/jose",
-            "version": "v0.0.10",
+            "version": "v2.0.0-beta1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Spomky-Labs/jose.git",
-                "reference": "d601f03f1e4273162fafd93cb3c3d13739b84e5a"
+                "reference": "fe04e5b8b160990f27ff30fc61369ab05e28f319"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Spomky-Labs/jose/zipball/d601f03f1e4273162fafd93cb3c3d13739b84e5a",
-                "reference": "d601f03f1e4273162fafd93cb3c3d13739b84e5a",
+                "url": "https://api.github.com/repos/Spomky-Labs/jose/zipball/fe04e5b8b160990f27ff30fc61369ab05e28f319",
+                "reference": "fe04e5b8b160990f27ff30fc61369ab05e28f319",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3",
-                "spomky-labs/jose-interface": "~2.0"
+                "beberlei/assert": "^2.0",
+                "lib-openssl": "*",
+                "php": ">=5.5.9",
+                "phpseclib/phpseclib": "^2.0",
+                "spomky-labs/aes-key-wrap": "^2.0",
+                "spomky-labs/base64url": "^1.0"
             },
             "require-dev": {
-                "ext-mcrypt": "*",
-                "lib-openssl": "*",
                 "mdanter/ecc": "0.3",
-                "phpseclib/phpseclib": "~2.0.0",
-                "phpunit/phpunit": "~4.5",
-                "spomky-labs/aes-key-wrap": "~2.0",
-                "spomky-labs/pbkdf2": "~1.0"
+                "phpunit/phpunit": "^4.5|^5.0",
+                "satooshi/php-coveralls": "^1.0"
             },
             "suggest": {
                 "ext-crypto": "Required to use AES GCM based algorithms.",
-                "ext-mcrypt": "Required to use AES based (except AES-GCM) algorithms (only needed if lib-openssl is not enabled).",
-                "lib-openssl": "Required to use AES based algorithms (except AES-GCM).",
-                "mdanter/ecc": "Required to use Elliptic Curves based algorithms",
-                "phpseclib/phpseclib": "Required to use RSA based algorithms and for AES based algorithms (only if lib-openssl and ext-mcrypt are not enabled).",
-                "spomky-labs/aes-key-wrap": "Required to use Key Wrapped (A128KW, PBES2-HS256+A128KW...) algorithms",
-                "spomky-labs/pbkdf2": "Required to use PBES2-* algorithms"
+                "mdanter/ecc": "Required to use ECC based algorithms (only v0.3 is supported)."
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "0.0.x-dev"
+                    "dev-master": "2.0.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "SpomkyLabs\\Jose\\": "lib/"
+                    "Jose\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -245,6 +312,10 @@
             "authors": [
                 {
                     "name": "Florent Morselli",
+                    "homepage": "https://github.com/Spomky"
+                },
+                {
+                    "name": "All contributors",
                     "homepage": "https://github.com/Spomky-Labs/jose/contributors"
                 }
             ],
@@ -256,135 +327,25 @@
                 "JWK",
                 "JWKSet",
                 "JWS",
-                "jwa",
-                "jwt"
-            ],
-            "time": "2015-08-05 22:00:56"
-        },
-        {
-            "name": "spomky-labs/jose-interface",
-            "version": "v2.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Spomky-Labs/jose-interface.git",
-                "reference": "387a5244ecbfba2bd0270d5fe2e0cd99e53d3e1a"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Spomky-Labs/jose-interface/zipball/387a5244ecbfba2bd0270d5fe2e0cd99e53d3e1a",
-                "reference": "387a5244ecbfba2bd0270d5fe2e0cd99e53d3e1a",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*",
-                "php": ">=5.4",
-                "spomky-labs/base64url": "~0.0.0"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "~4.5"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.0.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Jose\\": "lib/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Florent Morselli",
-                    "homepage": "https://github.com/Spomky-Labs/jose-interface/contributors"
-                }
-            ],
-            "description": "JSON Object Signing and Encryption interfaces for PHP.",
-            "homepage": "https://github.com/Spomky-Labs/jose-interface",
-            "keywords": [
-                "JOSE",
-                "JWE",
-                "JWK",
-                "JWKSet",
-                "JWS",
                 "Jot",
+                "RFC7515",
+                "RFC7516",
+                "RFC7517",
+                "RFC7518",
+                "RFC7519",
+                "RFC7520",
                 "jwa",
                 "jwt"
             ],
-            "time": "2015-04-18 18:53:07"
-        },
-        {
-            "name": "spomky-labs/jose-service",
-            "version": "v0.0.5",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Spomky-Labs/jose-service.git",
-                "reference": "5d4e3708d6bae42329aa484a1c1d5baa7ce1e78b"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Spomky-Labs/jose-service/zipball/5d4e3708d6bae42329aa484a1c1d5baa7ce1e78b",
-                "reference": "5d4e3708d6bae42329aa484a1c1d5baa7ce1e78b",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3",
-                "pimple/pimple": "~3.0.0",
-                "spomky-labs/jose": "~0.0.9"
-            },
-            "require-dev": {
-                "ext-mcrypt": "*",
-                "lib-openssl": "*",
-                "mdanter/ecc": "~0.3",
-                "phpseclib/phpseclib": "~2.0.0",
-                "phpunit/phpunit": "~4.5",
-                "spomky-labs/aes-key-wrap": "~2.0",
-                "spomky-labs/pbkdf2": "~1.0"
-            },
-            "type": "project",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "0.0.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "SpomkyLabs\\Service\\": "lib/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Florent Morselli",
-                    "homepage": "https://github.com/Spomky-Labs/jose-service/contributors"
-                }
-            ],
-            "description": "JSON Object Signing and Encryption service for PHP.",
-            "homepage": "https://github.com/Spomky-Labs/jose-service",
-            "keywords": [
-                "JOSE",
-                "JWE",
-                "JWK",
-                "JWKSet",
-                "JWS",
-                "jwa",
-                "jwt"
-            ],
-            "time": "2015-08-05 20:56:46"
+            "time": "2016-02-21 10:50:42"
         }
     ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "spomky-labs/jose": 10
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
