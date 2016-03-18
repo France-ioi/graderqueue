@@ -33,4 +33,24 @@ Cheers,
 -- 
 graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url)));
 }
+
+# Warn about servers not waking-up
+$stmt = $db->query("SELECT name, wakeup_fails, last_poll_time FROM `servers` WHERE wakeup_fails >= 3;");
+$wakeup_error_servers = '';
+while($row = $stmt->fetch()) {
+  $wakeup_error_servers .= $row['name'] . "(" . $row['wakeup_fails'] . " failures, last poll " . $row['last_poll_time'] . ")\n";
+}
+if($wakeup_error_servers != '') {
+  mail($CFG_admin_email, "[graderqueue] Servers not waking-up", strtr("
+Hi,
+
+The following servers having woken up after a few tries:
+:errorserv
+Please check :url.
+
+Cheers,
+
+-- 
+graderqueue", array(':errorserv' => $wakeup_error_servers, ':url' => $CFG_interface_url)));
+}
 ?>

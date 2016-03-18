@@ -138,8 +138,21 @@ results on its standard output.
 Before using it, you need to edit `config.py`, using the template from
 `config.py.template`, and supply the client SSL certificate for this server.
 
+The command `server.py -s` will launch it in server-mode: it will daemonize and
+listen on UDP for wake-up signals from the graderqueue.
+
+### Testing the connection
 Once configured, you can execute `server.py -t` to test the connection and
 authentication to the graderqueue.
 
-The command `server.py -s` will launch it in server-mode: it will daemonize and
-listen on UDP for wake-up signals from the graderqueue.
+### Testing the graderqueue with graderserver
+The command-line argument `--testbehavior` allows to use graderserver as a test
+server for graderqueue, by simulating various behaviors an erroneous server may
+have. It accepts an integer to select which test behavior to apply:
+* `0`: behave normally (default)
+* `1`: accept a job, then poll for a new one immediately without sending back any results
+* `2`: accept a job, then wait for 60 seconds before starting the evaluation; allows to test behavior on jobs with a timeout shorter than 60 seconds
+* `3`: accept a job, then report a fatal error while sending results
+* `4`: accept a job, then report a temporary error while sending results
+* `5`: accept a job, then send back erroneous results
+* `6`: accept a job, then use /bin/cat as taskgrader, effectively sending job JSON as a dummy result JSON

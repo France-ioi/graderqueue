@@ -43,7 +43,8 @@ Time limit (ms) : <input type="text" name="timelimit" value="60000" /><br />
 Language : <input type="text" name="lang" value="c" /><br />
 Priority : <input type="text" name="priority" value="10" /><br />
 Tags : <input type="text" name="tags" value="" /><br />
-Token : <input type="text" name="token" value="<?=$token ?>" />
+Send <input type="text" name="times" value="1" /> times<br />
+<input type="hidden" name="token" value="<?=$token ?>" />
 <input type="submit" value="Submit" />
 </form></div>
 <div>Test jobs :
@@ -63,7 +64,9 @@ Token : <input type="text" name="token" value="<?=$token ?>" />
   }
 ?>
 </div>
-<div id="jobSendResult"></div>
+<div><span id="jobSendProgress"></span><br />
+<a onclick="$('#jobSendResults').toggle();" href="#form">Details</a><br />
+<span id="jobSendResults">Nothing yet.</span></div>
 <?php
 } else {
   echo "<div><i>Disabled. Set \$CFG_accept_interface_tokens to true in config.inc.php to enable.</i></div>";
@@ -108,7 +111,11 @@ while($row = $res->fetch()) {
   }
   echo "<td>" . $row['ssl_serial'] . "</td>";
   echo "<td>" . $row['ssl_dn'] . "</td>";
-  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a></td>";
+  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a>";
+  if($row['wakeup_fails'] > 0) {
+    echo "&nbsp;<font color=\"red\"><i>(" . $row['wakeup_fails'] . " recent failures)</i<</font>";
+  }
+  echo "</td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
   echo "<td>" . $row['nbjobs'] . " / " . $row['max_concurrent_jobs'] . "</td>";
   echo "<td>" . $row['last_poll_time'] . "</td>";
@@ -311,18 +318,25 @@ $( "#jobSend" ).submit(function( event ) {
   var $form = $( this ),
     url = $form.attr( "action" );
 
-  $( "#jobSendResult" ).empty().append("<img src=\"res/loading.gif\" />");
+  $( "#jobSendProgress" ).empty().append("<img src=\"res/loading.gif\" />");
+  $( "#jobSendResults" ).empty();
   fdata = new FormData(this);
   fdata.append("request", "sendsolution");
-  $.ajax({
-    url: url,
-    type: 'POST',
-    data: fdata,
-    cache: false,
-    processData: false,
-    contentType: false,
-    success: function( data ) { $( "#jobSendResult" ).empty().append(data); }
-  });
+  times = parseInt(fdata.get('times'));
+  for(i = 1; i <= times; i++) {
+    $( "#jobSendProgress" ).empty().append("<img src=\"res/loading.gif\" /> Sending request "+i+"/"+times+"...");
+    $.ajax({
+      url: url,
+      type: 'POST',
+      data: fdata,
+      cache: false,
+      processData: false,
+      contentType: false,
+      indexValue: i,
+      success: function( data ) { $( "#jobSendResults" ).append("Request "+this.indexValue+": "+data+"<br />"); }
+    });
+  }
+  $( "#jobSendProgress" ).empty().append("Sent "+times+" requests!");
 });
 
 function wakeupServer(sid) {

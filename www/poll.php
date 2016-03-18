@@ -36,7 +36,7 @@ if($servdata['max_concurrent_jobs'] > 0) {
   }
 }
 
-$stmt = $db->prepare("UPDATE `servers` SET last_poll_time=NOW() WHERE id=:sid;");
+$stmt = $db->prepare("UPDATE `servers` SET last_poll_time=NOW(), wakeup_fails=0 WHERE id=:sid;");
 $stmt->execute(array(':sid' => $server_id));
 $start_time = time();
 

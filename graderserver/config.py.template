@@ -10,6 +10,8 @@
 ### server.py configuration
 # Path to the taskgrader executable
 CFG_TASKGRADER = '/path/to/taskgrader.py'
+# Timeout for taskgrader execution
+CFG_TIMEOUT = 900
 
 # Log file (when not specified on command-line)
 CFG_LOGFILE = None
