@@ -28,11 +28,11 @@ def listenWakeup(ev):
         logging.debug('Wakeup listener received `%s` from %s' % (data, addr))
         if data == 'wakeup':
             logging.info('Received valid wake-up signal.')
-            sock.sendto('ok', addr.encode('utf-8'))
+            sock.sendto(b'ok', addr)
             ev.set()
         else:
             logging.info('Received invalid wake-up signal.')
-            sock.sendto('no', addr.encode('utf-8'))
+            sock.sendto(b'no', addr)
 
 
 def communicateWithTimeout(subProc, timeout=0, input=None):
