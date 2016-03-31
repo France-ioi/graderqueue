@@ -26,7 +26,7 @@ def listenWakeup(ev):
         (data, addr) = sock.recvfrom(1024)
         # TODO :: Replace this by a real authentication
         logging.debug('Wakeup listener received `%s` from %s' % (data, addr))
-        if data == 'wakeup':
+        if data == b'wakeup':
             logging.info('Received valid wake-up signal.')
             sock.sendto(b'ok', addr)
             ev.set()
