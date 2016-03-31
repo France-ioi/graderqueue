@@ -39,8 +39,11 @@ CFG_WAKEUP_IP   = '0.0.0.0'
 CFG_WAKEUP_PORT = 20000
 
 # Server certificate validation files
-# CA to check the certificate against; use a list for multiple CAs
+# CA to check the certificate against
 CFG_SSL_CA = ''   # CA.crt file path
+# Server hostname
+CFG_SSL_HOSTNAME = None
+
 # Hostname checker to use on server certificate (for urllib2_ssl)
 # To check the hostname corresponds to the certificate,
 # use urllib2_ssl.match_hostname, else put None

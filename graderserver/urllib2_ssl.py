@@ -153,6 +153,7 @@ else: # ssl is available
         def __init__(self, host, **kwargs):         
             self.ca_certs = kwargs.pop('ca_certs', None)
             self.checker = kwargs.pop('checker', match_hostname)
+            self.server_hostname = kwargs.pop('server_hostname', None)
 
             # for python < 2.6
             self.timeout = kwargs.get('timeout', socket.getdefaulttimeout())
@@ -171,17 +172,20 @@ else: # ssl is available
             if getattr(self, '_tunnel_host', None):
                 self.sock = sock
                 self._tunnel()
+
             # wrap the socket using verification with the root
             #    certs in self.ca_certs
-            kwargs = {}
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
             if self.ca_certs is not None:
-                kwargs.update(
-                    cert_reqs=ssl.CERT_REQUIRED,
-                    ca_certs=self.ca_certs)
-            self.sock = ssl.wrap_socket(sock,
-                                        keyfile=self.key_file,
-                                        certfile=self.cert_file,
-                                        **kwargs)
+                context.verify_mode = ssl.CERT_REQUIRED
+                if self.ca_certs == 'default':
+                    context.load_default_certs()
+                else:
+                    context.load_verify_locations(cafile=self.ca_certs)
+            context.check_hostname = (self.checker is not None)
+            context.load_cert_chain(self.cert_file, self.key_file)
+            self.sock = context.wrap_socket(sock, server_hostname=self.server_hostname)
+
             if self.checker is not None:
                 try:
                     self.checker(self.sock.getpeercert(), self.host)
@@ -199,12 +203,14 @@ else: # ssl is available
         #   we use properties passed in rather than static module
         #   fields.
         def __init__(self, key_file=None, cert_file=None, ca_certs=None,
+                     server_hostname=None,
                      checker=match_hostname):
             request.HTTPSHandler.__init__(self)
             # see http://docs.python.org/library/ssl.html#certificates
             self.key_file = key_file
             self.cert_file = cert_file
             self.ca_certs = ca_certs
+            self.server_hostname = server_hostname
             self.checker = checker
 
         def https_open(self, req):
@@ -217,6 +223,7 @@ else: # ssl is available
             d = dict(cert_file=self.cert_file,
                      key_file=self.key_file,
                      ca_certs=self.ca_certs,
+                     server_hostname=self.server_hostname,
                      checker=self.checker)
             d.update(kwargs)
             return HTTPSConnection(host, **d)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2015 France-IOI, MIT license
@@ -10,11 +10,10 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, logging, os, socket, sys, subprocess, threading
-import urllib, urllib2, urllib2_ssl
+import argparse, json, logging, os, socket, ssl, sys, subprocess, threading
+import urllib.request, urllib.parse, urllib2_ssl
 from config import *
 import time
-
 
 def listenWakeup(ev):
     """Listening loop: listen on TCP, set the event ev each time we get a
@@ -60,7 +59,7 @@ if __name__ == '__main__':
     argParser.add_argument('-L', '--logfile', help='Write logs into file LOGFILE', action='store', metavar='LOGFILE')
     argParser.add_argument('-s', '--server', help='Server mode; start only if not already started (implies -D)', action='store_true')
     argParser.add_argument('-t', '--testconnection', help='Test connection with the graderqueue (exits after testing)', action='store_true')
-    argParser.add_argument('-T', '--testbehavior', help='Test the graderqueue through different behaviors', default=0, type=int, choices=xrange(0, 7))
+    argParser.add_argument('-T', '--testbehavior', help='Test the graderqueue through different behaviors', default=0, type=int, choices=range(0, 7))
     argParser.add_argument('-v', '--verbose', help='Be more verbose', action='store_true')
 
     args = argParser.parse_args()
@@ -90,30 +89,31 @@ if __name__ == '__main__':
         logging.getLogger().addHandler(logStderr)
 
     # HTTPS layer
-    opener = urllib2.build_opener(urllib2_ssl.HTTPSHandler(
+    opener = urllib.request.build_opener(urllib2_ssl.HTTPSHandler(
             key_file=CFG_SSL_KEY,
             cert_file=CFG_SSL_CERT,
             ca_certs=CFG_SSL_CA,
+            server_hostname=CFG_SSL_HOSTNAME,
             checker=CFG_SSL_CHECKER))
 
     # Test mode: try communicating with the graderqueue
     if args.testconnection:
-        print "Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST
-        r = opener.open(CFG_GRADERQUEUE_TEST).read()
+        print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
+        r = opener.open(CFG_GRADERQUEUE_TEST).read().decode('utf-8')
 
         logging.debug("Received: %s" % r)
 
         try:
             jsondata = json.loads(r)
         except:
-            print "Error: received invalid JSON data. Test failed."
+            print("Error: received invalid JSON data. Test failed.")
             sys.exit(1)
 
         if jsondata['errorcode'] == 0:
-            print "Test successful, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg'])
+            print("Test successful, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
             sys.exit(0)
         else:
-            print "Test failed, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg'])
+            print("Test failed, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
             sys.exit(1)
 
 
@@ -134,10 +134,10 @@ if __name__ == '__main__':
                 os.kill(pid, 0)
             except OSError as err:
                 if err.errno == 1:
-                    print "Server exists as another user. Exiting."
+                    print("Server exists as another user. Exiting.")
                     sys.exit(1)
             else:
-                print "Server already launched. Exiting."
+                print("Server already launched. Exiting.")
                 sys.exit(1)
 
     if args.daemon:
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
         # nbtasks=0 means we don't currently have any tasks active
         r = opener.open(CFG_GRADERQUEUE_POLL,
-                data=urllib.urlencode({'nbtasks': 0})).read()
+                data=bytes(urllib.parse.urlencode({'nbtasks': 0}), 'utf-8')).read().decode('utf-8')
         try:
             jsondata = json.loads(r)
         except:
@@ -183,7 +183,7 @@ if __name__ == '__main__':
             logging.debug('Received: %s' % r)
             sys.exit(1)
 
-        if not jsondata.has_key('errorcode'):
+        if 'errorcode' not in jsondata:
             logging.critical('Error: Taskqueue returned data without errorcode.')
             logging.debug('Received: %s' % r)
             sys.exit(1)
@@ -219,7 +219,7 @@ if __name__ == '__main__':
         elif jsondata['errorcode'] != 0:
             logging.critical('Error: Taskqueue returned an unknown errorcode (%s): %s' % (jsondata['errorcode'], jsondata['errormsg']))
             sys.exit(1)
-        elif not (jsondata.has_key('jobdata') and jsondata.has_key('jobname') and jsondata.has_key('jobid')):
+        elif not ('jobdata' in jsondata and 'jobname' in jsondata and 'jobid' in jsondata):
             logging.critical('Error: Taskqueue returned no jobdata.')
             sys.exit(1)
 
@@ -236,8 +236,8 @@ if __name__ == '__main__':
             time.sleep(60)
 
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
-        if jobdata.has_key('restrictToPaths'):
-            jobdata['restrictToPaths'] = map(lambda p: Template(p).safe_substitute(CFG_GRADERQUEUE_VARS), jobdata['restrictToPaths'])
+        if 'restrictToPaths' in jobdata:
+            jobdata['restrictToPaths'] = [Template(p).safe_substitute(CFG_GRADERQUEUE_VARS) for p in jobdata['restrictToPaths']]
             jobdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
         elif CFG_SERVER_RESTRICT:
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
@@ -271,11 +271,11 @@ if __name__ == '__main__':
                 for execution in evalJson['executions']:
                     logging.debug(' * Execution %s:' % execution['name'])
                     for report in execution['testsReports']:
-                        if report.has_key('checker'):
+                        if 'checker' in report:
                             # Everything was executed
                             logging.info('Solution executed successfully.')
                             logging.debug(report['checker']['stdout']['data'])
-                        elif report.has_key('execution'):
+                        elif 'execution' in report:
                             # Solution error
                             logging.info('Solution returned an error.')
                             logging.debug(json.dumps(report['execution']))
@@ -330,7 +330,7 @@ if __name__ == '__main__':
         while respTries < 3:
             # Send back results
             logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
-            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.urlencode(respData)).read()
+            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData)).read().decode('utf-8')
             logging.info("Sent results.")
             try:
                 respJson = json.loads(resp)
