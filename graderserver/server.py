@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 France-IOI, MIT license
+# Copyright (c) 2015-2016 France-IOI, MIT license
 #
 # http://opensource.org/licenses/MIT
 
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
         # nbtasks=0 means we don't currently have any tasks active
         r = opener.open(CFG_GRADERQUEUE_POLL,
-                data=bytes(urllib.parse.urlencode({'nbtasks': 0}), 'utf-8')).read().decode('utf-8')
+                data=urllib.parse.urlencode({'nbtasks': 0}).encode('utf-8')).read().decode('utf-8')
         try:
             jsondata = json.loads(r)
         except:
@@ -252,7 +252,8 @@ if __name__ == '__main__':
             cmdline = ['/bin/cat']
 
         # Send to taskgrader
-        proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         (procOut, procErr) = communicateWithTimeout(proc, timeout=CFG_TIMEOUT, input=json.dumps(jobdata))
         logging.debug('* Output from taskgrader:')
         logging.debug('stdout: ```\n%s\n```' % procOut)
@@ -330,7 +331,7 @@ if __name__ == '__main__':
         while respTries < 3:
             # Send back results
             logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
-            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData)).read().decode('utf-8')
+            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData).encode('utf-8')).read().decode('utf-8')
             logging.info("Sent results.")
             try:
                 respJson = json.loads(resp)
