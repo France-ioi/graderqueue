@@ -34,6 +34,17 @@ CFG_GRADERQUEUE_VARS = {} # Values for variables from the graderqueue
 # Paths to restrict taskgrader access to
 CFG_SERVER_RESTRICT  = []
 
+# Local repositories (list of dicts)
+# Example: [{
+#    'path': "/path/to/localrepo",
+#    'type': "svn",
+#    'remote': "http://svn.example.com/repo"
+#    }]
+CFG_REPOSITORIES = []
+# Common folders: list of paths (in repositories) which are to be always kept
+# up-to-date; their associated repositories must be defined in CFG_REPOSITORIES
+CFG_COMMONFOLDERS = []
+
 # Wake-up parameters: IP and port to listen on
 CFG_WAKEUP_IP   = '0.0.0.0'
 CFG_WAKEUP_PORT = 20000

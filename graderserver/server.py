@@ -11,9 +11,13 @@
 
 
 import argparse, json, logging, os, socket, ssl, sys, subprocess, threading
+import xml.dom.minidom
 import urllib.request, urllib.parse, urllib2_ssl
 from config import *
 import time
+
+# subprocess.DEVNULL is only present in python 3.3+.
+DEVNULL = open(os.devnull, 'w')
 
 def listenWakeup(ev):
     """Listening loop: listen on TCP, set the event ev each time we get a
@@ -48,6 +52,107 @@ def communicateWithTimeout(subProc, timeout=0, input=None):
     else:
         return subProc.communicate(input=input)
 
+
+class RepositoryHandler(object):
+    """Class handling the various repositories and storing data about them in
+    memory to improve performance."""
+
+    def _loadRepository(self, repo):
+        """Load information about a repository into memory."""
+        repo['path'] = os.path.realpath(repo['path']) + '/'
+
+        # Get last commit of the master repository
+        if repo['type'] == 'svn':
+            #try:
+            if True:
+                svnInfo = subprocess.check_output(['/usr/bin/svn', 'info', '--xml', repo['remote']], universal_newlines=True)
+                svnInfoXml = xml.dom.minidom.parseString(svnInfo)
+                repo['lastCommit'] = svnInfoXml.getElementsByTagName('entry')[0].getAttribute('revision')
+            #except:
+            #    repo['lastCommit'] = 'unknown'
+        else:
+            # git lastCommit: git ls-remote [REMOTE]
+            # git curCommit: git rev-parse HEAD
+            raise Exception("Repository type '%s' not supported.")
+
+        logging.info("Loaded repository `%s`, lastCommit=%s." % (repo['path'], repo['lastCommit']))
+
+        return repo
+
+    def __init__(self, repositories, commonFolders):
+        """Initialize the class, loading information from the repositories and
+        updating each commonFolder to the latest version."""
+        # Local repositories
+        self.repositories = repositories
+        for repo in self.repositories:
+            self._loadRepository(repo)
+
+        # Cache for subfolder revisions
+        self.subFolders = {}
+
+        # Folders which are always at the latest version
+        self.commonFolders = commonFolders
+        for folder in self.commonFolders:
+            self.update(folder)
+
+    def update(self, folder, rev='HEAD'):
+        """Update a folder to revision 'rev'."""
+        foldPath = os.path.realpath(folder.replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)) + '/'
+        curRepo = None
+        for repo in self.repositories:
+            if os.path.commonprefix([repo['path'], foldPath]) == repo['path']:
+                curRepo = repo
+                break
+
+        # This folder is not part of a repository
+        if not curRepo:
+            # return False if a specific revision was asked, as it means it was
+            # supposed to be part of a repository
+            logging.info("No repository found for folder `%s`." % folder)
+            return (rev == 'HEAD')
+
+        logging.info("Repository found for folder `%s`, at path `%s`." % (folder, repo['path']))
+
+        if foldPath in self.subFolders:
+            # Load revision from runtime cache
+            foldRev = self.subFolders[foldPath]
+        else:
+            if curRepo['type'] == 'svn':
+                # Get current version of folder
+                svnv = subprocess.check_output(['/usr/bin/svnversion', foldPath], universal_newlines=True)
+                foldRev = ''
+                # Check the revision number is all digits (and maybe a 'P' for
+                # people who don't have access to the whole repository)
+                for c in svnv.strip():
+                    if c.isdigit():
+                        foldRev += c
+                    elif c != 'P':
+                        # It's not all digits, it indicates that not all files
+                        # are in the same revision
+                        foldRev = None
+                        break
+
+        # Check if revision is the target revision
+        if rev == 'HEAD':
+            targetRev = repo['lastCommit']
+        else:
+            targetRev = rev
+
+        logging.info("Folder revision='%s', target='%s'" % (foldRev, targetRev))
+
+        if foldRev != targetRev:
+            if curRepo['type'] == 'svn':
+                # Update folder to rev
+                logging.info("Updating folder to target revision...")
+                svnup = subprocess.call(['/usr/bin/svn', 'update', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
+                if svnup > 0:
+                    # Failure, we return without updating
+                    logging.warning("Failure updating task `%s`." % fold)
+                    return False
+
+        # Save new revision into runtime cache
+        self.subFolders[foldPath] = targetRev
+        return True
 
 if __name__ == '__main__':
     # Read command line options
@@ -167,6 +272,10 @@ if __name__ == '__main__':
         wakeupThread.setDaemon(True)
         wakeupThread.start()
 
+    # Initialize RepositoryHandler, loading information from repositories
+    repoHand = RepositoryHandler(CFG_REPOSITORIES, CFG_COMMONFOLDERS)
+
+
     while(True):
         # Main polling loop
         # Will terminate after a poll without any available job or an error
@@ -242,10 +351,15 @@ if __name__ == '__main__':
         elif CFG_SERVER_RESTRICT:
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
+        # Update repository if needed
+        if 'taskrevision' in jsondata:
+            logging.info("Updating `%s` to revision '%s'..." % (jobdata['taskPath'], jsondata['taskrevision']))
+            repoHand.update(jobdata['taskPath'], rev=jsondata['taskrevision'])
+
         logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' %json.dumps(jobdata))
 
         # Command-line to execute as taskgrader
-        cmdline = ['/usr/bin/python2', CFG_TASKGRADER]
+        cmdline = [CFG_TASKGRADER]
         if args.testbehavior == 6:
             # Test behavior 6: set results as input JSON
             logging.info("Test behavior 6; using cat as taskgrader...")
