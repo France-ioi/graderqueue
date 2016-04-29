@@ -47,6 +47,7 @@ CFG_SERVER_RESTRICT  = []
 CFG_REPOSITORIES = []
 # Common folders: list of paths (in repositories) which are to be always kept
 # up-to-date; their associated repositories must be defined in CFG_REPOSITORIES
+# Example: ["/path/to/localrepo/commontools", "/path/to/localrepo/commonlibs"]
 CFG_COMMONFOLDERS = []
 
 # Wake-up parameters: IP and port to listen on
