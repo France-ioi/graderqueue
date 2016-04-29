@@ -10,6 +10,10 @@
 ### server.py configuration
 # Path to the taskgrader executable
 CFG_TASKGRADER = '/path/to/taskgrader.py'
+# Path to the genJson tool from the taskgrader repository, typically
+# CFG_GENJSON = 'taskgrader-repository/tools/genJson/genJson.py'
+# Leave it to None to not regenerate defaultParams automatically
+CFG_GENJSON = None
 # Timeout for taskgrader execution
 CFG_TIMEOUT = 900
 

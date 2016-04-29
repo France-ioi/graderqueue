@@ -273,8 +273,16 @@ if __name__ == '__main__':
         wakeupThread.start()
 
     # Initialize RepositoryHandler, loading information from repositories
+    logging.info('Initializing RepositoryHandler...')
     repoHand = RepositoryHandler(CFG_REPOSITORIES, CFG_COMMONFOLDERS)
 
+    # Get genJson version
+    if CFG_GENJSON:
+        try:
+            genJsonVer = subprocess.check_output([CFG_GENJSON, '--version'], universal_newlines=True).strip()
+        except:
+            genJsonVer = 'unknown'
+        logging.info("Local genJson at version '%s'." % genJsonVer)
 
     while(True):
         # Main polling loop
@@ -344,7 +352,12 @@ if __name__ == '__main__':
             logging.info('Test behavior 2; waiting 60 seconds...')
             time.sleep(60)
 
+        # Log some information to send back to the graderqueue
+        errorMsg = ""
+
+        # Handle paths
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
+        taskPath = jobdata['taskPath'].replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)
         if 'restrictToPaths' in jobdata:
             jobdata['restrictToPaths'] = [Template(p).safe_substitute(CFG_GRADERQUEUE_VARS) for p in jobdata['restrictToPaths']]
             jobdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
@@ -352,11 +365,32 @@ if __name__ == '__main__':
             jobdata['restrictToPaths'] = CFG_SERVER_RESTRICT
 
         # Update repository if needed
+        repoUp = False
         if 'taskrevision' in jsondata:
-            logging.info("Updating `%s` to revision '%s'..." % (jobdata['taskPath'], jsondata['taskrevision']))
-            repoHand.update(jobdata['taskPath'], rev=jsondata['taskrevision'])
+            logging.info("Updating `%s` to revision '%s'..." % (taskPath, jsondata['taskrevision']))
+            repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
+            if not repoUp:
+                logging.warning("Couldn't update task `%s` to revision '%s'." % (taskPath, jsondata['taskrevision']))
+                errorMsg += "Couldn't update task `%s` to revision '%s'.\n" % (jobdata['taskPath'], jsondata['taskrevision'])
 
-        logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' %json.dumps(jobdata))
+        # (Re)generate defaultParams.json if needed
+        if CFG_GENJSON:
+            try:
+                taskJsonVer = json.load(open(os.path.join(taskPath, 'defaultParams.json'), 'r'))['genJsonVersion']
+            except:
+                taskJsonVer = ''
+            # Update if the repository revision was just updated or if the
+            # genJson version changed
+            if repoUp or taskJsonVer != genJsonVer:
+                logging.info("Regenerating defaultParams for task...")
+                gjCode = subprocess.call([CFG_GENJSON, taskPath], stdout=DEVNULL, stderr=DEVNULL)
+                if gjCode == 0:
+                    logging.info("Regeneration successful.")
+                else:
+                    logging.warning("Couldn't regenerate defaultParams for task `%s`." % taskPath)
+                    errorMsg += "Couldn't regenerate defaultParams for task `%s`.\n" % jobdata['taskPath']
+
+        logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' % json.dumps(jobdata))
 
         # Command-line to execute as taskgrader
         cmdline = [CFG_TASKGRADER]
@@ -380,7 +414,7 @@ if __name__ == '__main__':
             evalJson = None
 
         if evalJson:
-            logging.info("Execution successful.")
+            logging.info("Taskgrader execution successful.")
             # Log a summary of the execution results
             try:
                 for execution in evalJson['executions']:
@@ -405,10 +439,11 @@ if __name__ == '__main__':
                 logging.debug(json.dumps(evalJson))
 
             # Make data to send back
+            errorMsg += "Taskgrader executed successfully.\n"
             respData = {'jobid': jsondata['jobid'],
                     'resultdata': json.dumps({
                         'errorcode': 0,
-                        'errormsg': "Success",
+                        'errormsg': errorMsg,
                         'jobdata': evalJson})}
 
         else:
@@ -417,9 +452,9 @@ if __name__ == '__main__':
             # errorCode = 1 means general error, abandon // 2 means temporary error, retry
             errorCode = max(1, proc.returncode)
             if errorCode == 1:
-                errorMsg = "Fatal error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
+                errorMsg += "Fatal taskgrader error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
             elif errorCode == 2:
-                errorMsg = "Temporary error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
+                errorMsg += "Temporary taskgrader error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
 
             # Send back the error
             respData = {'jobid': jsondata['jobid'],
