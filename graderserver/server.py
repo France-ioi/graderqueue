@@ -109,7 +109,10 @@ class RepositoryHandler(object):
             # return False if a specific revision was asked, as it means it was
             # supposed to be part of a repository
             logging.info("No repository found for folder `%s`." % folder)
-            return (rev == 'HEAD')
+            if rev == 'HEAD':
+                return False
+            else:
+                raise Exception("Failure updating task `%s` to revision `%s`, no repository found." % (fold, rev))
 
         logging.info("Repository found for folder `%s`, at path `%s`." % (folder, repo['path']))
 
@@ -148,7 +151,9 @@ class RepositoryHandler(object):
                 if svnup > 0:
                     # Failure, we return without updating
                     logging.warning("Failure updating task `%s`." % fold)
-                    return False
+                    raise Exception("Failure updating task `%s` to revision `%s`." % (fold, rev))
+        else:
+            return False
 
         # Save new revision into runtime cache
         self.subFolders[foldPath] = targetRev
@@ -273,7 +278,7 @@ if __name__ == '__main__':
         wakeupThread.start()
 
     # Initialize RepositoryHandler, loading information from repositories
-    logging.info('Initializing RepositoryHandler...')
+    logging.info('Server initialization...')
     repoHand = RepositoryHandler(CFG_REPOSITORIES, CFG_COMMONFOLDERS)
 
     # Get genJson version
@@ -282,7 +287,7 @@ if __name__ == '__main__':
             genJsonVer = subprocess.check_output([CFG_GENJSON, '--version'], universal_newlines=True).strip()
         except:
             genJsonVer = 'unknown'
-        logging.info("Local genJson at version '%s'." % genJsonVer)
+        logging.debug("Local genJson at version '%s'." % genJsonVer)
 
     while(True):
         # Main polling loop
@@ -367,22 +372,34 @@ if __name__ == '__main__':
         # Update repository if needed
         repoUp = False
         if 'taskrevision' in jsondata:
-            logging.info("Updating `%s` to revision '%s'..." % (taskPath, jsondata['taskrevision']))
-            repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
-            if not repoUp:
+            logging.info("Updating `%s` to revision '%s' if needed..." % (taskPath, jsondata['taskrevision']))
+            try:
+                repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
+            except:
                 logging.warning("Couldn't update task `%s` to revision '%s'." % (taskPath, jsondata['taskrevision']))
                 errorMsg += "Couldn't update task `%s` to revision '%s'.\n" % (jobdata['taskPath'], jsondata['taskrevision'])
+                repoUp = False
+            if repoUp:
+                logging.info("Updated `%s` to revision '%s' sucessfully." % (taskPath, jsondata['taskrevision']))
+            else:
+                logging.info("No modification.")
 
         # (Re)generate defaultParams.json if needed
         if CFG_GENJSON:
-            try:
-                taskJsonVer = json.load(open(os.path.join(taskPath, 'defaultParams.json'), 'r'))['genJsonVersion']
-            except:
-                taskJsonVer = ''
+            taskJsonVer = ''
+            if not repoUp:
+                try:
+                    taskJsonVer = json.load(open(os.path.join(taskPath, 'defaultParams.json'), 'r'))['genJsonVersion']
+                except:
+                    taskJsonVer = 'error'
             # Update if the repository revision was just updated or if the
             # genJson version changed
             if repoUp or taskJsonVer != genJsonVer:
-                logging.info("Regenerating defaultParams for task...")
+                if repoUp:
+                    logging.info("Regenerating defaultParams with updated repository...")
+                else:
+                    logging.info("Regenerating defaultParams with new genJson version...")
+                    logging.debug("taskJsonVer='%s', genJsonVer='%s'" % (taskJsonVer, genJsonVer))
                 gjCode = subprocess.call([CFG_GENJSON, taskPath], stdout=DEVNULL, stderr=DEVNULL)
                 if gjCode == 0:
                     logging.info("Regeneration successful.")
