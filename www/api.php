@@ -66,41 +66,40 @@ if(!isset($request['request'])) {
       die(jsonerror(2, "Solution missing from request."));
     }
 
+    if(!isset($request['lang'])) {
+      die(jsonerror(2, "Solution language missing from request."));
+    }
+    $sollang = $request['lang'];
+
     $memlimit = max(4, intval($request['memlimit']));
     $timelimit = max(1, intval($request['timelimit']));
-    $sollang = $request['lang'];
     $priority = max(0, intval($request['priority']));
 
+    # Make JSON (as stdGrade from taskgrader does)
+    $paramsjson = array();
 
     if(isset($request['solpath']) and $request['solpath'] != '') {
-      $solname = basename($request['solpath']);
-      $soljson = array(
-        "name" => $solname,
-        "path" => $request['solpath']);
+      $paramsjson['solutionFilename'] = basename($request['solpath']);
+      $paramsjson['solutionPath'] = $request['solpath'];
     } elseif(isset($request['solcontent']) and $request['solcontent'] != '') {
       # Adapt to sol
       if(isset($CFG_defaultexts[$sollang])) {
-        $solname = "main" . $CFG_defaultexts[$sollang];
+        $paramsjson['solutionFilename'] = "main" . $CFG_defaultexts[$sollang];
       } else {
-        $solname = "main" . $CFG_defaultexts['[default]'];
+        $paramsjson['solutionFilename'] = "main" . $CFG_defaultexts['[default]'];
       }
-      $soljson = array(
-        "name" => $solname,
-        "content" => $request['solcontent']);
+      $paramsjson['solutionContent'] = $request['solcontent'];
     } else {
-      $solname = $_FILES['solfile']['name'];
-      $soljson = array(
-        "name" => $solname,
-        "content" => file_get_contents($_FILES['solfile']['tmp_name']));
+      $paramsjson['solutionFilename'] = $_FILES['solfile']['name'];
+      $paramsjson['solutionContent'] = file_get_contents($_FILES['solfile']['tmp_name']);
     }
 
     if(isset($request['jobname'])) {
       $jobname = $request['jobname'];
     } else {
-      $jobname = "api-" . $solname;
+      $jobname = "api-" . $paramsjson['solutionFilename'];
     }
 
-    # Make JSON (as grade.py from jobgrader does)
     $execparamsjson = array("timeLimitMs" => $timelimit,
         "memoryLimitKb" => $memlimit,
         "useCache" => True,
@@ -108,29 +107,17 @@ if(!isset($request['request'])) {
         "stderrTruncateKb" => -1,
         "getFiles" => array());
 
-    $solutionsjson = array(array(
-        "id" => "sol-" . $solname,
-        "compilationDescr" => array(
-            "language" => $sollang,
-            "files" => array($soljson),
-            "dependencies" => "@defaultDependencies-" . $sollang),
-        "compilationExecution" => $execparamsjson));
-
-    $executionsjson = array(array(
-        "id" => "exec-" . $solname,
-        "idSolution" => "sol-" . $solname,
-        "filterTests" => "@defaultFilterTests-" . $sollang,
-        "runExecution" => $execparamsjson));
+    $paramsjson = $paramsjson + array(
+        "solutionId" => "sol-" . $paramsjson['solutionFilename'],
+        "solutionExecId" => "exec-" . $paramsjson['solutionFilename'],
+        "solutionLanguage" => $sollang,
+        "solutionDependencies" => "@defaultDependencies-" . $sollang,
+        "defaultSolutionCompParams" => $execparamsjson,
+        "defaultSolutionExecParams" => $execparamsjson);
 
     $evaljson = array(
         "taskPath" => $request['taskpath'],
-        "generators" => array("@defaultGenerator"),
-        "generations" => array("@defaultGeneration"),
-        "extraTests" => "@defaultExtraTests",
-        "sanitizer" => "@defaultSanitizer",
-        "checker" => "@defaultChecker",
-        "solutions" => $solutionsjson,
-        "executions" => $executionsjson);
+        "extraParams" => $paramsjson);
   }
 
   $priority = max(0, intval($request['priority']));
