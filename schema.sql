@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS `queue` (
   `timeout_time` datetime DEFAULT NULL,
   `tags` text NOT NULL,
     -- Tags of the job
+  `taskrevision` VARCHAR(40) NOT NULL DEFAULT '',
+    -- Revision / commit hash the task folder needs to be updated to
   `jobdata` longtext NOT NULL,
     -- JSON data for the job
   PRIMARY KEY (`id`)

@@ -84,6 +84,7 @@ while(time() - $start_time < 20) {
       echo json_encode(array('errorcode' => 0,
             'jobid' => intval($row['id']),
             'jobname' => $row['name'],
+            'taskrevision' => $row['taskrevision'],
             'jobdata' => json_decode($row['jobdata'])));
       db_log('notice_sentto', $row['id'], $server_id, '');
     } else {

@@ -43,6 +43,7 @@ Time limit (ms) : <input type="text" name="timelimit" value="60000" /><br />
 Language : <input type="text" name="lang" value="c" /><br />
 Priority : <input type="text" name="priority" value="10" /><br />
 Tags : <input type="text" name="tags" value="" /><br />
+Task revision : <input type="text" name="taskrevision" value="" /><br />
 Send <input type="text" name="times" value="1" /> times<br />
 <input type="hidden" name="token" value="<?=$token ?>" />
 <input type="submit" value="Submit" />

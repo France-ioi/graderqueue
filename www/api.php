@@ -122,6 +122,13 @@ if(!isset($request['request'])) {
 
   $priority = max(0, intval($request['priority']));
 
+  # Add the task revision asked
+  if(isset($request['taskrevision'])) {
+    $taskrevision = $request['taskrevision'];
+  } else {
+    $taskrevision = '';
+  }
+
   # Convert tags to list of server types which can execute the job
   if(isset($_POST['tags'])) {
     $tagids = tags_to_tagids($request['tags']);
@@ -149,9 +156,9 @@ if(!isset($request['request'])) {
   $db->query("START TRANSACTION;");
 
   # Queue entry
-  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, jobdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :jobdata);");
+  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, taskrevision, jobdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :taskrevision, :jobdata);");
   $jsondata = json_encode($evaljson);
-  $stmt->execute(array(':name' => $jobname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':jobdata' => $jsondata));
+  $stmt->execute(array(':name' => $jobname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
 
   $jobid = $db->lastInsertId();
   if(count($typeids) > 0) {
