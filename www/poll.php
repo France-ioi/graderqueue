@@ -64,7 +64,7 @@ while(time() - $start_time < 20) {
         AND EXISTS (SELECT 1 FROM job_types WHERE jobid=queue.id AND typeid=:typeid)
         ORDER BY priority DESC, received_time ASC
         LIMIT 1;");
-  $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type'], ':maxfails' => $CFG_max_fails-1));
+  $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type'], ':maxfails' => $CFG_max_fails));
 
   if($row = $queuelist->fetch()) {
     # We have a matching job
