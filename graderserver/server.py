@@ -371,7 +371,7 @@ if __name__ == '__main__':
 
         # Update repository if needed
         repoUp = False
-        if 'taskrevision' in jsondata:
+        if jsondata.get('taskrevision', ''):
             logging.info("Updating `%s` to revision '%s' if needed..." % (taskPath, jsondata['taskrevision']))
             try:
                 repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
