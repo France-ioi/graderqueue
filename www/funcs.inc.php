@@ -5,15 +5,12 @@
 
 require_once __DIR__."/../vendor/autoload.php";
 
-use Jose\Factory\DecrypterFactory;
 use Jose\Factory\VerifierFactory;
 use Jose\Factory\JWKFactory;
 use Jose\Loader;
 use Jose\Object\JWKSet;
-use Jose\Factory\EncrypterFactory;
 use Jose\Factory\SignerFactory;
 use Jose\Factory\JWSFactory;
-use Jose\Factory\JWEFactory;
 
 function deltatime($start, $end) {
   # Returns a string corresponding to the time delta between two datetimes
@@ -196,13 +193,8 @@ function get_token_client_info() {
 
   // actually decrypting token
   $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
-  $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
   try {
-    $jws = Loader::load($_POST['sToken']);
-    $decrypter = DecrypterFactory::createDecrypter(['A256CBC-HS512','RSA-OAEP-256']);
-    $decrypter->decryptUsingKey($jws, $privateKey);
-    $jws = $jws->getPayLoad();
-    $res = Loader::load($jws);
+    $res = Loader::load($_POST['sToken']);
     $verifier = VerifierFactory::createVerifier(['RS512']);
     $valid_signature = $verifier->verifyWithKey($res, $publicKey);
     if ($valid_signature === false) {
@@ -219,7 +211,6 @@ function encode_params_in_token($params, $platform) {
   global $CFG_private_key, $CFG_key_name;
   $params['date'] = date('d-m-Y');
 
-  $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
   $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
 
   $jws = JWSFactory::createJWS($params);
@@ -229,17 +220,5 @@ function encode_params_in_token($params, $platform) {
      $privateKey,
      ['alg' => 'RS512']
   );
-  $jws = $jws->toCompactJSON(0);
-
-  $jwe = JWEFactory::createJWE(
-     $jws,
-     [
-        'alg' => 'RSA-OAEP-256',
-        'enc' => 'A256CBC-HS512',
-        'zip' => 'DEF',
-     ]
-  );
-  $encrypter = EncrypterFactory::createEncrypter(['RSA-OAEP-256','A256CBC-HS512']);
-  $encrypter->addRecipient($jwe, $publicKey);
-  return $jwe->toCompactJSON(0);
+  return $jws->toCompactJSON(0);
 }
