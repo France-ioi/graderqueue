@@ -9,10 +9,26 @@ require("config.inc.php");
 list($platdata, $request) = get_token_client_info();
 
 if ($platdata && $request) {
-  # Client was identified
+  # Platform identified with JWT token
   $received_from = $platdata['id'];
+
+} elseif (isset($_POST['rRequest'])) {
+  # User identified by username/password for remotetest
+  $hashedpass = hash('md5', $_POST['rUsername'] . '@' . $_POST['rPassword']);
+
+  $stmt = $db->prepare("SELECT * FROM `remote_users` WHERE username = :username AND password = :hashedpass;");
+  $stmt->execute(array(':username' => $_POST['rUsername'], ':hashedpass' => $hashedpass));
+  if($userdata = $stmt->fetch()) {
+    $received_from = -1-$userdata['id'];
+    $platdata = array(
+        'restrict_paths' => '',
+        'force_tag' => -1);
+  } else {
+    die(jsonerror(2, "Username/password invalid."));
+  }
+  $request = json_decode($_POST['rRequest'], true);
+
 } elseif ($CFG_accept_interface_tokens && isset($_POST['token'])) {
-  $request = $_POST;
   # API used through interface.php, check token for validity
   $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
   $stmt->execute(array(':token' => $request['token']));
@@ -24,6 +40,7 @@ if ($platdata && $request) {
   } else {
     die(jsonerror(3, "Invalid token, please refresh the interface to get a new one."));
   }
+  $request = $_POST;
   $db->query("DELETE FROM `tokens` WHERE expiration_time < NOW();");
 } else {
   die(jsonerror(2, "No valid authentication provided."));
@@ -41,7 +58,7 @@ if(!isset($request['request'])) {
       die(jsonerror(2, "jobdata missing from request."));
     }
     try {
-        $evaljson = json_decode($request['jobdata']);
+        $evaljson = json_decode($request['jobdata'], true);
     } catch(Exception $e) {
         die(jsonerror(2, "Error while decoding job JSON : " . $e->getMessage()));
     }
@@ -201,7 +218,11 @@ if(!isset($request['request'])) {
 
 } elseif($request['request'] == "test") {
   # Test connection
-  die(jsonerror(0, "Connected as platform id ".$platdata['id']));
+  if($received_from > 0) {
+    die(jsonerror(0, "Connected as platform id ".$platdata['id']));
+  } elseif($received_from < -1) {
+    die(jsonerror(0, "Connected as user ".$userdata['name']));
+  }
 } elseif($request['request'] == "wakeup" && $received_from == -1) {
   # Wake-up a server (only through interface)
   $sid = max(0, intval($request['serverid']));

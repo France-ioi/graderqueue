@@ -93,6 +93,15 @@ CREATE TABLE IF NOT EXISTS `queue` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
+CREATE TABLE IF NOT EXISTS `remote_users` (
+    -- Remote users for taskgrader remotetest
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(32) NOT NULL,
+    -- Hashed password, hash('md5', 'username@password')
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS `server_types` (
     -- Each server type corresponds to a set of tags that can be handled.
   `id` int(11) NOT NULL AUTO_INCREMENT,
