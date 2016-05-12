@@ -221,7 +221,7 @@ if(!isset($request['request'])) {
   if($received_from > 0) {
     die(jsonerror(0, "Connected as platform id ".$platdata['id']));
   } elseif($received_from < -1) {
-    die(jsonerror(0, "Connected as user ".$userdata['name']));
+    die(jsonerror(0, "Connected as user ".$userdata['username']));
   }
 } elseif($request['request'] == "wakeup" && $received_from == -1) {
   # Wake-up a server (only through interface)

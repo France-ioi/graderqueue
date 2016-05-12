@@ -385,7 +385,7 @@ if __name__ == '__main__':
                 logging.info("No modification.")
 
         # (Re)generate defaultParams.json if needed
-        if CFG_GENJSON:
+        if CFG_GENJSON and taskPath != '/':
             taskJsonVer = ''
             if not repoUp:
                 try:
