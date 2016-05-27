@@ -63,13 +63,12 @@ class RepositoryHandler(object):
 
         # Get last commit of the master repository
         if repo['type'] == 'svn':
-            #try:
-            if True:
+            try:
                 svnInfo = subprocess.check_output(['/usr/bin/svn', 'info', '--xml', repo['remote']], universal_newlines=True)
                 svnInfoXml = xml.dom.minidom.parseString(svnInfo)
                 repo['lastCommit'] = svnInfoXml.getElementsByTagName('entry')[0].getAttribute('revision')
-            #except:
-            #    repo['lastCommit'] = 'unknown'
+            except:
+                repo['lastCommit'] = 'unknown'
         else:
             # git lastCommit: git ls-remote [REMOTE]
             # git curCommit: git rev-parse HEAD
@@ -122,7 +121,10 @@ class RepositoryHandler(object):
         else:
             if curRepo['type'] == 'svn':
                 # Get current version of folder
-                svnv = subprocess.check_output(['/usr/bin/svnversion', foldPath], universal_newlines=True)
+                try:
+                    svnv = subprocess.check_output(['/usr/bin/svnversion', foldPath], universal_newlines=True)
+                except:
+                    svnv = ''
                 foldRev = ''
                 # Check the revision number is all digits (and maybe a 'P' for
                 # people who don't have access to the whole repository)
@@ -152,6 +154,15 @@ class RepositoryHandler(object):
                     # Failure, we return without updating
                     logging.warning("Failure updating task `%s`." % fold)
                     raise Exception("Failure updating task `%s` to revision `%s`." % (fold, rev))
+                else:
+                    # Success, we check if the revision is further than the
+                    # recorded lastCommit
+                    try:
+                        if int(targetRev) > int(repo['lastCommit']):
+                            self._loadRepository(repo)
+                    except:
+                        pass
+
         else:
             return False
 
