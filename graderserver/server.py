@@ -64,7 +64,7 @@ class RepositoryHandler(object):
         # Get last commit of the master repository
         if repo['type'] == 'svn':
             try:
-                svnInfo = subprocess.check_output(['/usr/bin/svn', 'info', '--xml', repo['remote']], universal_newlines=True)
+                svnInfo = subprocess.check_output(self.svnCmd + ['info', '--xml', repo['remote']], universal_newlines=True)
                 svnInfoXml = xml.dom.minidom.parseString(svnInfo)
                 repo['lastCommit'] = svnInfoXml.getElementsByTagName('entry')[0].getAttribute('revision')
             except:
@@ -81,6 +81,13 @@ class RepositoryHandler(object):
     def __init__(self, repositories, commonFolders):
         """Initialize the class, loading information from the repositories and
         updating each commonFolder to the latest version."""
+        # SVN command
+        self.svnCmd = ['/usr/bin/svn']
+        if CFG_SVN_USER:
+            self.svnCmd.extend(['--username', CFG_SVN_USER])
+        if CFG_SVN_PASS:
+            self.svnCmd.extend(['--password', CFG_SVN_PASS])
+
         # Local repositories
         self.repositories = repositories
         for repo in self.repositories:
@@ -138,7 +145,7 @@ class RepositoryHandler(object):
                         break
 
         # Check if revision is the target revision
-        if rev == 'HEAD':
+        if rev == 'HEAD' and repo['lastCommit'] != 'unknown':
             targetRev = repo['lastCommit']
         else:
             targetRev = rev
@@ -149,11 +156,11 @@ class RepositoryHandler(object):
             if curRepo['type'] == 'svn':
                 # Update folder to rev
                 logging.info("Updating folder to target revision...")
-                svnup = subprocess.call(['/usr/bin/svn', 'update', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
+                svnup = subprocess.call(self.svnCmd + ['update', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
                 if svnup > 0:
                     # Failure, we return without updating
-                    logging.warning("Failure updating task `%s`." % fold)
-                    raise Exception("Failure updating task `%s` to revision `%s`." % (fold, rev))
+                    logging.warning("Failure updating task `%s`." % foldPath)
+                    raise Exception("Failure updating task `%s` to revision `%s`." % (foldPath, rev))
                 else:
                     # Success, we check if the revision is further than the
                     # recorded lastCommit

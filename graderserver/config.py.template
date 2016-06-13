@@ -49,6 +49,10 @@ CFG_REPOSITORIES = []
 # up-to-date; their associated repositories must be defined in CFG_REPOSITORIES
 # Example: ["/path/to/localrepo/commontools", "/path/to/localrepo/commonlibs"]
 CFG_COMMONFOLDERS = []
+# SVN username and password
+# If left empty, SVN will use saved credentials if they exist, or none
+CFG_SVN_USER = ''
+CFG_SVN_PASS = ''
 
 # Wake-up parameters: IP and port to listen on
 CFG_WAKEUP_IP   = '0.0.0.0'
