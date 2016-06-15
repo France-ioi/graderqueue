@@ -11,10 +11,9 @@
 
 
 import argparse, json, logging, os, socket, ssl, sys, subprocess, threading
-import xml.dom.minidom
+import time, xml.dom.minidom
 import urllib.request, urllib.parse, urllib2_ssl
 from config import *
-import time
 
 # subprocess.DEVNULL is only present in python 3.3+.
 DEVNULL = open(os.devnull, 'w')
@@ -53,6 +52,71 @@ def communicateWithTimeout(subProc, timeout=0, input=None):
         return subProc.communicate(input=input)
 
 
+class IdleWorker(object):
+    """Class handling actions to execute when the server is not evaluating any
+    task."""
+
+    def __init__(self, repoHand, genJson):
+        self.repoHand = repoHand
+        self.genJson = genJson
+        self.nextExecute = 0
+
+    def execute(self):
+        """Execute idle actions."""
+        if time.time() > self.nextExecute:
+            if self.genJson is not None:
+                self.genJson.getVersion()
+            self.repoHand.refresh()
+            self.nextExecute = time.time() + CFG_IDLEWORKER_INTERVAL
+
+
+class GenJsonHandler(object):
+    """Class handling genJson-related functions."""
+
+    def __init__(self):
+        self.genJsonVer = None
+        self.getVersion()
+
+    def getVersion(self):
+        """Load genJson version id."""
+        curVer = self.genJsonVer
+        try:
+            self.genJsonVer = subprocess.check_output([CFG_GENJSON, '--version'], universal_newlines=True).strip()
+        except:
+            self.genJsonVer = 'unknown'
+        if self.genJsonVer != curVer:
+            logging.debug("Local genJson at (new) version '%s'." % self.genJsonVer)
+
+        return self.genJsonVer
+
+    def update(self, taskPath, repoUp=False):
+        """Update defaultParams.json for taskPath.
+        repoUp means that we update because the repository was updated.
+        Returns -1 if no update was needed, else the exit code of genJson."""
+        if taskPath == '/':
+            return -1
+
+        if repoUp:
+            # Repository was updated
+            logging.info("Regenerating defaultParams with updated repository...")
+        else:
+            # Try to get version of the last defaultParams.json
+            try:
+                taskJsonVer = json.load(open(os.path.join(taskPath, 'defaultParams.json'), 'r'))['genJsonVersion']
+            except:
+                taskJsonVer = 'none'
+            if taskJsonVer == self.genJsonVer:
+                # No update needed
+                return -1
+            logging.info("Regenerating defaultParams with new genJson version...")
+            logging.debug("taskJsonVer='%s', genJsonVer='%s'" % (taskJsonVer, genJsonVer))
+
+        # Do the update
+        gjCode = subprocess.call([CFG_GENJSON, taskPath], stdout=DEVNULL, stderr=DEVNULL)
+
+        return gjCode
+
+
 class RepositoryHandler(object):
     """Class handling the various repositories and storing data about them in
     memory to improve performance."""
@@ -60,6 +124,11 @@ class RepositoryHandler(object):
     def _loadRepository(self, repo):
         """Load information about a repository into memory."""
         repo['path'] = os.path.realpath(repo['path']) + '/'
+
+        if 'lastCommit' in repo:
+            lastLc = repo['lastCommit']
+        else:
+            lastLc = None
 
         # Get last commit of the master repository
         if repo['type'] == 'svn':
@@ -74,9 +143,11 @@ class RepositoryHandler(object):
             # git curCommit: git rev-parse HEAD
             raise Exception("Repository type '%s' not supported.")
 
-        logging.info("Loaded repository `%s`, lastCommit=%s." % (repo['path'], repo['lastCommit']))
+        updated = (repo['lastCommit'] != lastLc)
+        if updated:
+            logging.info("Loaded repository `%s`, lastCommit=%s." % (repo['path'], repo['lastCommit']))
 
-        return repo
+        return updated
 
     def __init__(self, repositories, commonFolders):
         """Initialize the class, loading information from the repositories and
@@ -88,18 +159,27 @@ class RepositoryHandler(object):
         if CFG_SVN_PASS:
             self.svnCmd.extend(['--password', CFG_SVN_PASS])
 
-        # Local repositories
+        # Repositories
         self.repositories = repositories
-        for repo in self.repositories:
-            self._loadRepository(repo)
-
-        # Cache for subfolder revisions
-        self.subFolders = {}
-
         # Folders which are always at the latest version
         self.commonFolders = commonFolders
-        for folder in self.commonFolders:
-            self.update(folder)
+        # Cache for subfolders revisions
+        self.subFolders = {}
+
+        self.refresh()
+
+    def refresh(self):
+        """Load information from repositories and update commonFolders if
+        needed."""
+        # Load local repositories
+        repoChanged = False
+        for repo in self.repositories:
+            repoChanged = repoChanged or self._loadRepository(repo)
+
+        # Update commonFolders only if a repository version changed
+        if repoChanged:
+            for folder in self.commonFolders:
+                self.update(folder)
 
     def update(self, folder, rev='HEAD'):
         """Update a folder to revision 'rev'."""
@@ -120,7 +200,7 @@ class RepositoryHandler(object):
             else:
                 raise Exception("Failure updating task `%s` to revision `%s`, no repository found." % (fold, rev))
 
-        logging.info("Repository found for folder `%s`, at path `%s`." % (folder, repo['path']))
+        logging.debug("Repository found for folder `%s`, at path `%s`." % (folder, repo['path']))
 
         if foldPath in self.subFolders:
             # Load revision from runtime cache
@@ -150,9 +230,8 @@ class RepositoryHandler(object):
         else:
             targetRev = rev
 
-        logging.info("Folder revision='%s', target='%s'" % (foldRev, targetRev))
-
         if foldRev != targetRev:
+            logging.info("Folder revision='%s', target='%s'" % (foldRev, targetRev))
             if curRepo['type'] == 'svn':
                 # Update folder to rev
                 logging.info("Updating folder to target revision...")
@@ -177,6 +256,50 @@ class RepositoryHandler(object):
         self.subFolders[foldPath] = targetRev
         return True
 
+
+def testConnection(opener):
+    """Test the connection to the graderqueue.
+    opener must be an urllib opener."""
+    print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
+    r = opener.open(CFG_GRADERQUEUE_TEST).read().decode('utf-8')
+
+    logging.debug("Received: %s" % r)
+
+    try:
+        jsondata = json.loads(r)
+    except:
+        print("Error: received invalid JSON data. Test failed.")
+        return 1
+
+    if jsondata['errorcode'] == 0:
+        print("Test successful, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
+        return 0
+    else:
+        print("Test failed, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
+        return 1
+
+
+def checkServer():
+    """Check the server is not already started.
+    True means it is not already started."""
+    try:
+        pid = int(open(CFG_SERVER_PIDFILE, 'r').read())
+    except:
+        pid = 0
+    if pid > 0:
+        try:
+            os.kill(pid, 0)
+        except OSError as err:
+            if err.errno == 1:
+                print("Server exists as another user. Exiting.")
+                return False
+        else:
+            print("Server already launched. Exiting.")
+            return False
+
+    return True
+
+
 if __name__ == '__main__':
     # Read command line options
     argParser = argparse.ArgumentParser(description="Launches an evaluation server for use with the graderQueue.")
@@ -195,6 +318,12 @@ if __name__ == '__main__':
     # Some options imply others
     args.daemon = args.daemon or args.server
     args.verbose = args.verbose or args.debug
+
+    # Check daemon and verbose are not enabled together
+    if args.daemon and args.verbose:
+        logging.critical("Can't daemonize while verbose mode is enabled.")
+        argParser.print_help()
+        sys.exit(1)
 
     # Add configuration from config.py
     if CFG_LOGFILE and not args.logfile:
@@ -226,50 +355,16 @@ if __name__ == '__main__':
 
     # Test mode: try communicating with the graderqueue
     if args.testconnection:
-        print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
-        r = opener.open(CFG_GRADERQUEUE_TEST).read().decode('utf-8')
+        success = testConnection(opener)
+        sys.exit(success)
 
-        logging.debug("Received: %s" % r)
-
-        try:
-            jsondata = json.loads(r)
-        except:
-            print("Error: received invalid JSON data. Test failed.")
-            sys.exit(1)
-
-        if jsondata['errorcode'] == 0:
-            print("Test successful, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
-            sys.exit(0)
-        else:
-            print("Test failed, received answer: (#%d) %s" % (jsondata['errorcode'], jsondata['errormsg']))
-            sys.exit(1)
-
-
-    if args.daemon and args.verbose:
-        logging.critical("Can't daemonize while verbose mode is enabled.")
-        argParser.print_help()
-        sys.exit(1)
-
-
+    # Server-mode: launch only if not already started
     if args.server:
-        # Launch only if not already started
-        try:
-            pid = int(open(CFG_SERVER_PIDFILE, 'r').read())
-        except:
-            pid = 0
-        if pid > 0:
-            try:
-                os.kill(pid, 0)
-            except OSError as err:
-                if err.errno == 1:
-                    print("Server exists as another user. Exiting.")
-                    sys.exit(1)
-            else:
-                print("Server already launched. Exiting.")
-                sys.exit(1)
+        if not checkServer():
+            sys.exit(1)
 
+    # Daemonize
     if args.daemon:
-        # Daemonize
         if os.fork() > 0:
             sys.exit(0)
         devnull = os.open(os.devnull, os.O_RDWR)
@@ -282,13 +377,13 @@ if __name__ == '__main__':
         if os.fork() > 0:
             sys.exit(0)
 
+    # Write new PID
     if args.server:
-        # Write new PID
         open(CFG_SERVER_PIDFILE, 'w').write(str(os.getpid()))
 
+    # Launch a thread to listen on the UDP port
+    # The Event allows to tell when a wakeup signal has been received
     if args.listen:
-        # Launch a thread to listen on the UDP port
-        # The Event allows to tell when a wakeup signal has been received
         wakeupEvent = threading.Event()
 
         wakeupThread = threading.Thread(target=listenWakeup, kwargs={'ev': wakeupEvent})
@@ -299,13 +394,14 @@ if __name__ == '__main__':
     logging.info('Server initialization...')
     repoHand = RepositoryHandler(CFG_REPOSITORIES, CFG_COMMONFOLDERS)
 
-    # Get genJson version
+    # Create GenJsonHandler
     if CFG_GENJSON:
-        try:
-            genJsonVer = subprocess.check_output([CFG_GENJSON, '--version'], universal_newlines=True).strip()
-        except:
-            genJsonVer = 'unknown'
-        logging.debug("Local genJson at version '%s'." % genJsonVer)
+        genJson = GenJsonHandler()
+    else:
+        genJson = None
+
+    # Create IdleWorker
+    idleWorker = IdleWorker(repoHand, genJson)
 
     while(True):
         # Main polling loop
@@ -335,9 +431,9 @@ if __name__ == '__main__':
             if args.listen:
                 # Wait for a wake-up signal
                 wakeupEvent.clear()
-                while not wakeupEvent.wait(1):
+                while not wakeupEvent.wait(3):
                     # We use a timeout to keep the main thread responsive to interruptions
-                    pass
+                    idleWorker.execute()
                 logging.info('Received wake-up signal.')
                 continue
             elif args.server:
@@ -403,27 +499,16 @@ if __name__ == '__main__':
                 logging.info("No modification.")
 
         # (Re)generate defaultParams.json if needed
-        if CFG_GENJSON and taskPath != '/':
-            taskJsonVer = ''
-            if not repoUp:
-                try:
-                    taskJsonVer = json.load(open(os.path.join(taskPath, 'defaultParams.json'), 'r'))['genJsonVersion']
-                except:
-                    taskJsonVer = 'error'
-            # Update if the repository revision was just updated or if the
-            # genJson version changed
-            if repoUp or taskJsonVer != genJsonVer:
-                if repoUp:
-                    logging.info("Regenerating defaultParams with updated repository...")
-                else:
-                    logging.info("Regenerating defaultParams with new genJson version...")
-                    logging.debug("taskJsonVer='%s', genJsonVer='%s'" % (taskJsonVer, genJsonVer))
-                gjCode = subprocess.call([CFG_GENJSON, taskPath], stdout=DEVNULL, stderr=DEVNULL)
-                if gjCode == 0:
-                    logging.info("Regeneration successful.")
-                else:
-                    logging.warning("Couldn't regenerate defaultParams for task `%s`." % taskPath)
-                    errorMsg += "Couldn't regenerate defaultParams for task `%s`.\n" % jobdata['taskPath']
+        if CFG_GENJSON:
+            gjCode = genJson.update(taskPath, repoUp=repoUp)
+            if gjCode == 0:
+                logging.info("Regeneration successful.")
+            elif gjCode == 2:
+                logging.warning("Non-fatal error while regenerating defaultParams for task `%s`, exitcode=%d." % (taskPath, gjCode))
+                errorMsg += "Non-fatal error while regenerating defaultParams for task `%s`, exitcode=%d.\n" % (jobdata['taskPath'], gjCode)
+            elif gjCode > 0:
+                logging.warning("Error while regenerating defaultParams for task `%s`, exitcode=%d." % (taskPath, gjCode))
+                errorMsg += "Error while regenerating defaultParams for task `%s`, exitcode=%d.\n" % (jobdata['taskPath'], gjCode)
 
         logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' % json.dumps(jobdata))
 
@@ -475,11 +560,13 @@ if __name__ == '__main__':
 
             # Make data to send back
             errorMsg += "Taskgrader executed successfully.\n"
-            respData = {'jobid': jsondata['jobid'],
-                    'resultdata': json.dumps({
-                        'errorcode': 0,
-                        'errormsg': errorMsg,
-                        'jobdata': evalJson})}
+            respData = {
+                'jobid': jsondata['jobid'],
+                'resultdata': json.dumps({
+                    'errorcode': 0,
+                    'errormsg': errorMsg,
+                    'jobdata': evalJson
+                    })}
 
         else:
             logging.info("Taskgrader error.")
@@ -492,10 +579,12 @@ if __name__ == '__main__':
                 errorMsg += "Temporary taskgrader error.\nstdout:\n%s\nstderr:\n%s" % (procOut, procErr)
 
             # Send back the error
-            respData = {'jobid': jsondata['jobid'],
-                    'resultdata': json.dumps({
-                        'errorcode': errorCode,
-                        'errormsg': errorMsg})}
+            respData = {
+                'jobid': jsondata['jobid'],
+                'resultdata': json.dumps({
+                    'errorcode': errorCode,
+                    'errormsg': errorMsg
+                })}
 
         if args.testbehavior == 3:
             # Test behavior 3: report results as a fatal error

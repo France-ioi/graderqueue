@@ -38,6 +38,10 @@ CFG_GRADERQUEUE_VARS = {} # Values for variables from the graderqueue
 # Paths to restrict taskgrader access to
 CFG_SERVER_RESTRICT  = []
 
+# Interval (in seconds) between two executions of the IdleWorker
+# Will determine how often updates to genJson or the repositories are checked
+CFG_IDLEWORKER_INTERVAL = 10*60
+
 # Local repositories (list of dicts)
 # Example: [{
 #    'path': "/path/to/localrepo",
