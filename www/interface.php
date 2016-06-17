@@ -25,6 +25,10 @@ $tid = 0;
       cursor: help; text-decoration: none;
       position: relative;
     }
+
+    table {
+      border-collapse: collapse;
+    }
   </style>
 </head>
 <body>
@@ -129,18 +133,21 @@ echo "<div id=\"serverResult\"></div>";
 
 ##### Tasks done
 
-echo "<h2>Tasks done</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
-
 $res = $db->query("SELECT COUNT(*) FROM `done`;");
 $nbpages_done = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
+echo "<h2>Tasks done (page " . min($curpage, $nbpages_done) . "/$nbpages_done)</h2>";
+echo make_pages_selector($curpage, $nbpages_done);
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>job #" . $row['jobid'] . "<br><i>(" . $row['id'] . ")</i></td>";
+
   echo "<td>" . $row['name'] . "</td>";
   echo "<td>" . $row['priority'] . "</td>";
+
   echo "<td>" . $row['timeout_sec'] . "s<br />";
   if($row['nb_fails'] > 0)
   {
@@ -148,14 +155,16 @@ while($row = $res->fetch()) {
   } else {
     echo "<i>(" . $row['nb_fails'] . " fails)</i></td>";
   }
+
   echo "<td>Received&nbsp;from&nbsp;#" . $row['received_from'] . "<br />";
   echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
+
   echo "<td>Received&nbsp;:&nbsp;" . $row['received_time'] . "<br />";
   echo "sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['sent_time'] . "\">" . deltatime($row['received_time'], $row['sent_time']) . "</span><br />";
   echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['done_time'] . "\">" . deltatime($row['sent_time'], $row['done_time']) . "</span></td>";
-  echo "<td>";
 
   # Summary of resultdata
+  echo "<td>";
   $resultdata = json_decode($row['resultdata'], true);
 
   if(isset($resultdata['errorcode']) && $resultdata['errorcode'] > 0) {
@@ -173,8 +182,13 @@ while($row = $res->fetch()) {
       # Legacy code, could be deleted once development is done
       echo "<i>(old-format resultdata)</i><br />";
     }
+    foreach($resultdata['solutions'] as $solution) {
+      if($solution['compilationExecution']['exitCode'] > 0) {
+        echo "Solution '" . $solution['id'] . "' didn't compile.<br />";
+      }
+    }
     foreach($resultdata['executions'] as $execution) {
-      echo "*&nbsp;Execution&nbsp;" . $execution['name'] . "&nbsp;:<br />";
+      echo "*&nbsp;Execution&nbsp;'" . $execution['id'] . "'&nbsp;:<br />";
       foreach($execution['testsReports'] as $report) {
         if(isset($report['checker'])) {
           echo "<a id=\"toggle" . $tid . "\" />";
@@ -183,9 +197,9 @@ while($row = $res->fetch()) {
           echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $report['checker']['stdout']['data'] . "</pre>";
           $tid += 1;
         } elseif(isset($report['execution'])) {
-          echo "Solution returned an error. Check JSON data for details.";
+          echo "Solution returned an error.<br />";
         } else {
-          echo "Test rejected by sanitizer. Check JSON data for details.";
+          echo "Test rejected by sanitizer.<br />";
         }
       }
     }
@@ -199,24 +213,16 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
-
-echo "<div>Pages: ";
-for($i=1; $i <= $nbpages_done; $i++) {
-  if($i == min($curpage, $nbpages_done)) {
-    echo "<b>$i</b>&nbsp;";
-  } else {
-    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
-  }
-}
-echo "</div>";
+echo make_pages_selector($curpage, $nbpages_done);
 
 ##### Tasks
 
-echo "<h2>Tasks</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>jobdata</b></td></tr>";
-
 $res = $db->query("SELECT COUNT(*) FROM `queue`;");
 $nbpages_queue = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
+echo "<h2>Tasks (page " . min($curpage, $nbpages_queue) . "/$nbpages_queue)</h2>";
+echo make_pages_selector($curpage, $nbpages_queue);
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>jobdata</b></td></tr>";
 
 $res = $db->query("
   SELECT queue.*,
@@ -259,25 +265,17 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
-
-echo "<div>Pages: ";
-for($i=1; $i <= $nbpages_queue; $i++) {
-  if($i == min($curpage, $nbpages_queue)) {
-    echo "<b>$i</b>&nbsp;";
-  } else {
-    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
-  }
-}
-echo "</div>";
+echo make_pages_selector($curpage, $nbpages_queue);
 
 
 ##### Log
 
-echo "<h2>Log</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>job_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
-
 $res = $db->query("SELECT COUNT(*) FROM `log`;");
 $nbpages_log = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
+
+echo "<h2>Log (page " . min($curpage, $nbpages_log) . "/$nbpages_log)</h2>";
+echo make_pages_selector($curpage, $nbpages_log);
+echo "<table border=1><tr><td><b>id</b></td><td><b>datetime</b></td><td><b>log_type</b></td><td><b>job_id</b></td><td><b>server_id</b></td><td><b>message</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `log` ORDER BY datetime DESC LIMIT " . (min($curpage, $nbpages_log)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
@@ -292,16 +290,8 @@ while($row = $res->fetch()) {
 }
 
 echo "</table>";
+echo make_pages_selector($curpage, $nbpages_log);
 
-echo "<div>Pages: ";
-for($i=1; $i <= $nbpages_log; $i++) {
-  if($i == min($curpage, $nbpages_log)) {
-    echo "<b>$i</b>&nbsp;";
-  } else {
-    echo "<a href=\"interface.php?page=$i\">$i</a>&nbsp;";
-  }
-}
-echo "</div>";
 
 ##### Pretty-printed JSON
 ?>

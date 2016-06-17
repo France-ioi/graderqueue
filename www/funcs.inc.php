@@ -243,3 +243,29 @@ function encode_params_in_token($params, $platform) {
   $encrypter->addRecipient($jwe, $publicKey);
   return $jwe->toCompactJSON(0);
 }
+
+
+function make_pages_selector($curpage, $nbpages) {
+  // Make the pages selector for interface.php, shown before and after each
+  // "big" table
+  if($nbpages == 1) return '';
+
+  $realpage = max(1, min($curpage, $nbpages));
+
+  $html = "<div>Pages: ";
+  if($realpage <= 1) {
+    $html .= "<b>&lt;&lt; First</b>&nbsp;&lt; Prev&nbsp;";
+  } else {
+    $html .= "<a href=\"interface.php\">&lt;&lt; First</a>&nbsp;<a href=\"interface.php?page=" . ($realpage-1) . "\">&lt; Prev</a>&nbsp;";
+  }
+  $html .= "[Page $realpage/$nbpages]&nbsp;";
+  if($realpage >= $nbpages) {
+    $html .= "Next &gt;&nbsp;<b>Last &gt;&gt;</b>&nbsp";
+  } else {
+    $html .= "<a href=\"interface.php?page=" . ($realpage+1) . "\">Next &gt;</a>&nbsp;<a href=\"interface.php?page=$nbpages\">Last &gt;&gt;</a>&nbsp;";
+  }
+  $html .= "</div>";
+  return $html;
+}
+
+?>
