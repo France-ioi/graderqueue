@@ -407,6 +407,10 @@ if __name__ == '__main__':
         # Main polling loop
         # Will terminate after a poll without any available job or an error
 
+        # Clear the wake-up signal
+        if args.listen:
+            wakeupEvent.clear()
+
         # Request data from the graderqueue
         logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
         # nbtasks=0 means we don't currently have any tasks active
@@ -430,7 +434,6 @@ if __name__ == '__main__':
 
             if args.listen:
                 # Wait for a wake-up signal
-                wakeupEvent.clear()
                 while not wakeupEvent.wait(3):
                     # We use a timeout to keep the main thread responsive to interruptions
                     idleWorker.execute()
