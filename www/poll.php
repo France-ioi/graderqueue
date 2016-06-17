@@ -78,7 +78,7 @@ while(time() - $start_time < 20) {
     }
 
     # We send the job and write down which server we sent it to
-    $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=NOW()+timeout_sec WHERE id=:id;");
+    $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND) WHERE id=:id;");
     if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
       # Output the task information
       echo json_encode(array('errorcode' => 0,
