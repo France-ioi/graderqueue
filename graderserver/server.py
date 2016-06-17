@@ -607,8 +607,16 @@ if __name__ == '__main__':
         while respTries < 3:
             # Send back results
             logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
-            resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData).encode('utf-8')).read().decode('utf-8')
-            logging.info("Sent results.")
+            try:
+                resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData).encode('utf-8')).read().decode('utf-8')
+                logging.info("Sent results.")
+            except Exception as e:
+                logging.critical("Error while sending back results: %s" % str(e))
+                respTries += 1
+                logging.debug("Waiting 3 seconds before retrying...")
+                time.sleep(3)
+                continue
+
             try:
                 respJson = json.loads(resp)
                 logging.info("Taskqueue response: (%d) %s" % (respJson['errorcode'], respJson['errormsg']))
