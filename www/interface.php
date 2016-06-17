@@ -185,6 +185,9 @@ while($row = $res->fetch()) {
     foreach($resultdata['solutions'] as $solution) {
       if($solution['compilationExecution']['exitCode'] > 0) {
         echo "Solution '" . $solution['id'] . "' didn't compile.<br />";
+        echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle compiler report</a><br />";
+        echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $solution['compilationExecution']['stderr']['data'] . "</pre>";
+        $tid += 1;
       }
     }
     foreach($resultdata['executions'] as $execution) {

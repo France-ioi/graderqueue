@@ -5,7 +5,7 @@
 
 if(isset($_POST['jsondata'])) {
   try {
-    echo "<pre>" . json_encode(json_decode($_POST['jsondata']), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "</pre>";
+    echo "<pre>" . htmlspecialchars(json_encode(json_decode($_POST['jsondata']), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) . "</pre>";
   } catch (Exception $e) {
     die("JSON data invalid.");
   }
