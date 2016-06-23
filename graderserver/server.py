@@ -109,7 +109,7 @@ class GenJsonHandler(object):
                 # No update needed
                 return -1
             logging.info("Regenerating defaultParams with new genJson version...")
-            logging.debug("taskJsonVer='%s', genJsonVer='%s'" % (taskJsonVer, genJsonVer))
+            logging.debug("taskJsonVer='%s', genJsonVer='%s'" % (taskJsonVer, self.genJsonVer))
 
         # Do the update
         gjCode = subprocess.call([CFG_GENJSON, taskPath], stdout=DEVNULL, stderr=DEVNULL)
