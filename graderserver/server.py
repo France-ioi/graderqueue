@@ -61,11 +61,24 @@ class IdleWorker(object):
         self.genJson = genJson
         self.nextExecute = 0
 
+    def autoClean(self):
+        """Execute taskgrader auto-clean script."""
+        try:
+            lastClean = float(open(CFG_CLEAN_TIMESTAMP, 'r').read())
+        except:
+            lastClean = 0
+        if time.time() - lastClean > CFG_IDLEWORKER_INTERVAL:
+            logging.info("Executing taskgrader auto-clean script.")
+            open(CFG_CLEAN_TIMESTAMP, 'w').write(str(time.time()))
+            cleanProc = subprocess.Popen([CFG_CLEAN_SCRIPT])
+            cleanProc.wait()
+
     def execute(self):
         """Execute idle actions."""
         if time.time() > self.nextExecute:
             if self.genJson is not None:
                 self.genJson.getVersion()
+            self.autoClean()
             self.repoHand.refresh()
             self.nextExecute = time.time() + CFG_IDLEWORKER_INTERVAL
 

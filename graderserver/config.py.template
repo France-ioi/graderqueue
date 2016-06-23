@@ -17,6 +17,13 @@ CFG_GENJSON = None
 # Timeout for taskgrader execution
 CFG_TIMEOUT = 900
 
+# Path to the taskgrader auto-clean executable (included in taskgrader
+# repository); None to not use it
+CFG_CLEAN_SCRIPT = '/path/to/clean_cache.py'
+# Path to the taskgrader auto-clean timestamp file
+# (same than CFG_CLEAN_TIMESTAMP in taskgrader's config.py)
+CFG_CLEAN_TIMESTAMP = '/tmp/.taskgrader-autoclean'
+
 # Log file (when not specified on command-line)
 CFG_LOGFILE = None
 # Log level, must be 'CRITICAL', 'ERROR', 'WARNING', 'INFO' or 'DEBUG'
