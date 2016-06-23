@@ -236,23 +236,8 @@ class RepositoryHandler(object):
                 # Update folder to rev
                 logging.info("Updating folder to target revision...")
 
-                # We need to update the first versioned parent folder, else SVN
-                # will just ignore it
-                # (We consider if the folder currently exists, it is versioned.)
-                curFoldPath = foldPath
-                safetyCounter = 10
-                while not os.path.isdir(curFoldPath):
-                    curFoldPath = os.path.dirname(curFoldPath)
-                    if not os.path.commonprefix([repo['path'], curFoldPath]) == repo['path']:
-                        curFoldPath = repo['path']
-                        break
-                    safetyCounter -= 1
-                    if safetyCounter <= 0:
-                        curFoldPath = repo['path']
-                        break
-
                 # Call SVN
-                svnup = subprocess.call(self.svnCmd + ['update', '-r', rev, curFoldPath], stdout=DEVNULL, stderr=DEVNULL)
+                svnup = subprocess.call(self.svnCmd + ['update', '--parents', '-r', rev, curFoldPath], stdout=DEVNULL, stderr=DEVNULL)
 
                 if svnup > 0:
                     # Failure, we return without updating
