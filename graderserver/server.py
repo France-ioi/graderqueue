@@ -209,7 +209,7 @@ class RepositoryHandler(object):
             if curRepo['type'] == 'svn':
                 # Get current version of folder
                 try:
-                    svnv = subprocess.check_output(['/usr/bin/svnversion', foldPath], universal_newlines=True)
+                    svnv = subprocess.check_output(['/usr/bin/svnversion', foldPath], stderr=DEVNULL, universal_newlines=True)
                 except:
                     svnv = ''
                 foldRev = ''
@@ -235,7 +235,25 @@ class RepositoryHandler(object):
             if curRepo['type'] == 'svn':
                 # Update folder to rev
                 logging.info("Updating folder to target revision...")
-                svnup = subprocess.call(self.svnCmd + ['update', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
+
+                # We need to update the first versioned parent folder, else SVN
+                # will just ignore it
+                # (We consider if the folder currently exists, it is versioned.)
+                curFoldPath = foldPath
+                safetyCounter = 10
+                while not os.path.isdir(curFoldPath):
+                    curFoldPath = os.path.dirname(curFoldPath)
+                    if not os.path.commonprefix([repo['path'], curFoldPath]) == repo['path']:
+                        curFoldPath = repo['path']
+                        break
+                    safetyCounter -= 1
+                    if safetyCounter <= 0:
+                        curFoldPath = repo['path']
+                        break
+
+                # Call SVN
+                svnup = subprocess.call(self.svnCmd + ['update', '-r', rev, curFoldPath], stdout=DEVNULL, stderr=DEVNULL)
+
                 if svnup > 0:
                     # Failure, we return without updating
                     logging.warning("Failure updating task `%s`." % foldPath)
