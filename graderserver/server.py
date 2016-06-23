@@ -10,8 +10,8 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, logging, os, socket, ssl, sys, subprocess, threading
-import time, xml.dom.minidom
+import argparse, json, logging, os, signal, socket, ssl, sys, subprocess
+import threading, time, xml.dom.minidom
 import urllib.request, urllib.parse, urllib2_ssl
 from config import *
 
@@ -260,6 +260,26 @@ class RepositoryHandler(object):
         return True
 
 
+class SignalHandler(object):
+    """A very simple class to handle exit signals. Similar to
+    threading.Event."""
+
+    def __init__(self, wakeupEvent=None):
+        self.wakeupEvent = wakeupEvent
+        self.flag = False
+        signal.signal(signal.SIGINT, self.setFlag)
+        signal.signal(signal.SIGTERM, self.setFlag)
+
+    def setFlag(self, signal, frame):
+        logging.info("Received interruption signal, waiting for current job to finish.")
+        self.flag = True
+        if self.wakeupEvent is not None:
+            self.wakeupEvent.set()
+
+    def isSet(self):
+        return self.flag
+
+
 def testConnection(opener):
     """Test the connection to the graderqueue.
     opener must be an urllib opener."""
@@ -392,6 +412,11 @@ if __name__ == '__main__':
         wakeupThread = threading.Thread(target=listenWakeup, kwargs={'ev': wakeupEvent})
         wakeupThread.setDaemon(True)
         wakeupThread.start()
+    else:
+        wakeupEvent = None
+
+    # Handle SIGTERM/SIGINT signals
+    signalHand = SignalHandler(wakeupEvent)
 
     # Initialize RepositoryHandler, loading information from repositories
     logging.info('Server initialization...')
@@ -409,6 +434,10 @@ if __name__ == '__main__':
     while(True):
         # Main polling loop
         # Will terminate after a poll without any available job or an error
+
+        if signalHand.isSet():
+            logging.info('Exiting after interruption signal.')
+            sys.exit(0)
 
         # Clear the wake-up signal
         if args.listen:
@@ -451,7 +480,8 @@ if __name__ == '__main__':
                 while not wakeupEvent.wait(3):
                     # We use a timeout to keep the main thread responsive to interruptions
                     idleWorker.execute()
-                logging.info('Received wake-up signal.')
+                if not signalHand.isSet():
+                    logging.info('Received wake-up signal.')
                 continue
             elif args.server:
                 # Poll again
