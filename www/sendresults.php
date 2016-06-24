@@ -92,6 +92,9 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
 # If job was sent through interface, we're done
 if($jobrow['received_from'] <= 0 || $platform['return_url'] == '') {
   die();
+} else {
+  # Close database access
+  $db = null;
 }
 // else send result to return_url if present:
 
