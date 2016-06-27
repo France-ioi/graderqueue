@@ -39,7 +39,7 @@ function jsonerror($code, $msg) {
 function db_log($log_type, $job_id, $server_id, $message) {
   # Adds a log line to the database table 'log'
   global $db;
-  $stmt = $db->prepare("INSERT INTO `log` (date, log_type, job_id, server_id, message) VALUES(:type, :jobid, :sid, :msg)");
+  $stmt = $db->prepare("INSERT INTO `log` (datetime, log_type, job_id, server_id, message) VALUES(NOW(), :type, :jobid, :sid, :msg)");
   return $stmt->execute(array(':type' => $log_type, ':jobid' => $job_id, ':sid' => $server_id, ':msg' => $message));
 }
 
