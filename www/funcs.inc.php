@@ -39,10 +39,31 @@ function jsonerror($code, $msg) {
 function db_log($log_type, $job_id, $server_id, $message) {
   # Adds a log line to the database table 'log'
   global $db;
-  $stmt = $db->prepare("INSERT INTO `log` (date, log_type, job_id, server_id, message) VALUES(:type, :jobid, :sid, :msg)");
+  $stmt = $db->prepare("INSERT INTO `log` (datetime, log_type, job_id, server_id, message) VALUES(NOW(), :type, :jobid, :sid, :msg)");
   return $stmt->execute(array(':type' => $log_type, ':jobid' => $job_id, ':sid' => $server_id, ':msg' => $message));
 }
 
+function connect_pdo($hostname, $database, $user, $password) {
+   // computing timezone difference with gmt:
+   // http://www.sitepoint.com/synchronize-php-mysql-timezone-configuration/
+   $now = new DateTime();
+   $mins = $now->getOffset() / 60;
+   $sgn = ($mins < 0 ? -1 : 1);
+   $mins = abs($mins);
+   $hrs = floor($mins / 60);
+   $mins -= $hrs * 60;
+   $offset = sprintf('%+d:%02d', $hrs*$sgn, $mins);
+   try {
+      $pdo_options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
+      $pdo_options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8";
+      $connexionString = "mysql:host=".$hostname.";dbname=".$database.";charset=utf8";
+      $db = new PDO($connexionString, $user, $password, $pdo_options);
+      $db->exec("SET time_zone='".$offset."';");
+   } catch (Exception $e) {
+      die("Erreur : " . $e->getMessage());
+   }
+   return $db;
+}
 
 function get_ssl_client_info($table) {
   # Returns the database row about a client identified by his SSL cert

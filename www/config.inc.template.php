@@ -75,7 +75,7 @@ $CFG_buttons = array(
 ### End of configuration
 
 try {
-  $db = new PDO('mysql:host=' . $CFG_db_hostname . ';dbname=' . $CFG_db_database, $CFG_db_user, $CFG_db_password);
+  $db = connect_pdo($CFG_db_hostname, $CFG_db_database, $CFG_db_user, $CFG_db_password);
 } catch(PDOException $e) {
   die(jsonerror(2, "Failed to connect to database: " . $e->getMessage()));
 }

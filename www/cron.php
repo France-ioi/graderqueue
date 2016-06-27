@@ -6,7 +6,7 @@
 require __DIR__.'/config.inc.php';
 
 # Delete old tasks and logs
-$stmt = $db->prepare("DELETE FROM `tasks` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day);");
+$stmt = $db->prepare("DELETE FROM `queue` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));
 $stmt = $db->prepare("DELETE FROM `done` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));

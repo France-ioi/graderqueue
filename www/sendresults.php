@@ -93,7 +93,9 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
 if($jobrow['received_from'] <= 0 || $platform['return_url'] == '') {
   die();
 } else {
-  # Close database access
+  # Close connection to database
+  $res = null;
+  $stmt = null;
   $db = null;
 }
 // else send result to return_url if present:
