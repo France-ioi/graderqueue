@@ -68,7 +68,6 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
     # Success!
     $stmt = $db->prepare("DELETE FROM `queue` WHERE id=:jobid;");
     $stmt->execute(array(':jobid' => $job_id));
-    db_log('notice_recv_resultdata', $job_id, $server_id, '');
     $db->commit();
     echo jsonerror(0, "Saved resultdata.");
   } else {
