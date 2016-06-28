@@ -86,7 +86,6 @@ while(time() - $start_time < 20) {
             'jobname' => $row['name'],
             'taskrevision' => $row['taskrevision'],
             'jobdata' => json_decode($row['jobdata'])));
-      db_log('notice_sentto', $row['id'], $server_id, '');
     } else {
       echo jsonerror(2, "Failed to update queue, cannot send job.");
     }
