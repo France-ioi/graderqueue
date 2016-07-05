@@ -250,7 +250,7 @@ class RepositoryHandler(object):
                 logging.info("Updating folder to target revision...")
 
                 # Call SVN
-                svnup = subprocess.call(self.svnCmd + ['update', '--parents', '-r', rev, curFoldPath], stdout=DEVNULL, stderr=DEVNULL)
+                svnup = subprocess.call(self.svnCmd + ['update', '--parents', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
 
                 if svnup > 0:
                     # Failure, we return without updating
@@ -304,7 +304,7 @@ def testConnection(opener):
     try:
         jsondata = json.loads(r)
     except:
-        print("Error: received invalid JSON data. Test failed.")
+        print("Error: received invalid JSON data: `%s`.\nTest failed." % r)
         return 1
 
     if jsondata['errorcode'] == 0:
@@ -549,8 +549,8 @@ if __name__ == '__main__':
             logging.info("Updating `%s` to revision '%s' if needed..." % (taskPath, jsondata['taskrevision']))
             try:
                 repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
-            except:
-                logging.warning("Couldn't update task `%s` to revision '%s'." % (taskPath, jsondata['taskrevision']))
+            except Exception as e:
+                logging.warning("Couldn't update task `%s` to revision '%s': %s." % (taskPath, jsondata['taskrevision'], str(e)))
                 errorMsg += "Couldn't update task `%s` to revision '%s'.\n" % (jobdata['taskPath'], jsondata['taskrevision'])
                 repoUp = False
             if repoUp:
