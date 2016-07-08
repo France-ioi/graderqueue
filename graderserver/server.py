@@ -192,7 +192,12 @@ class RepositoryHandler(object):
         # Update commonFolders only if a repository version changed
         if repoChanged:
             for folder in self.commonFolders:
-                self.update(folder)
+                try:
+                    self.update(folder)
+                except Exception as e:
+                    # Will be retried automatically; SVN errors will end up
+                    # sent to the graderqueue
+                    logging.warning(str(e))
 
     def update(self, folder, rev='HEAD'):
         """Update a folder to revision 'rev'."""
