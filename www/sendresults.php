@@ -36,7 +36,7 @@ try {
 $db->beginTransaction();
 
 # Check the server was sent this job
-$res = $db->prepare("SELECT * FROM `queue` WHERE status='sent' AND id=:jobid AND sent_to=:sid;");
+$res = $db->prepare("SELECT * FROM `queue` WHERE status='sent' AND id=:jobid AND sent_to=:sid FOR UPDATE;");
 $res->execute(array(':jobid' => $job_id, ':sid' => $server_id));
 if(!$jobrow = $res->fetch()) {
   db_log('error_not_assigned', $job_id, $server_id, '');
@@ -81,8 +81,6 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
   # Try again sending the task
   $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE id=:jobid;");
   $stmt->execute(array(':jobid' => $job_id));
-  $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
-  $stmt->execute(array(':maxfails' => $CFG_max_fails));
   db_log('error_in_result', $job_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();
   die(jsonerror(2, "Resultdata received invalid."));
@@ -92,12 +90,12 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
 if($jobrow['received_from'] <= 0 || $platform['return_url'] == '') {
   die();
 } else {
-  # Close connection to database
+  # Else send result to return_url if present
+  # Close connection to database while sending back results
   $res = null;
   $stmt = null;
   $db = null;
 }
-// else send result to return_url if present:
 
 $tokenParams = array(
   'sTaskName' => $jobrow['name'],

@@ -5,6 +5,10 @@
 
 require __DIR__.'/config.inc.php';
 
+# Set tasks in error when their nb_fails is too high
+$stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
+$stmt->execute(array(':maxfails' => $CFG_max_fails));
+
 # Delete old tasks and logs
 $stmt = $db->prepare("DELETE FROM `queue` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));

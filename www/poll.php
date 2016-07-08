@@ -19,11 +19,6 @@ if(isset($_POST['nbtasks']) && $_POST['nbtasks'] == 0) {
   # some, we consider them as timeouted on that server
   $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE status='sent' AND sent_to=:sid;");
   $stmt->execute(array(':sid' => $server_id));
-  if($stmt->rowCount() > 0) {
-    # The server indeed had task sent to it but never sent results
-    $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
-    $stmt->execute(array(':maxfails' => $CFG_max_fails));
-  }
 }
 
 # Check the server isn't considered as busy
@@ -63,22 +58,22 @@ while(time() - $start_time < 20) {
         )
         AND EXISTS (SELECT 1 FROM job_types WHERE jobid=queue.id AND typeid=:typeid)
         ORDER BY priority DESC, received_time ASC
-        LIMIT 1;");
-  $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type'], ':maxfails' => $CFG_max_fails));
+        LIMIT 1
+        FOR UPDATE;");
+  $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type'], ':maxfails' => $CFG_max_fstmt));
 
   if($row = $queuelist->fetch()) {
     # We have a matching job
+    $query = "UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
     if($row['status'] == 'sent') {
       # Task was selected because it timed out on last server
-      # We update the tables
-      $db->query("INSERT INTO `log` (datetime, log_type, job_id, server_id) SELECT NOW(), 'error_timeout', queue.id, queue.sent_to FROM `queue` WHERE queue.status='sent' AND queue.timeout_time <= NOW();");
-      $db->query("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE status='sent' AND timeout_time <= NOW();");
-      $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
-      $stmt->execute(array(':maxfails' => $CFG_max_fails));
+      db_log('error_timeout', $row['id'], $row['sent_to']);
+      $query .= ", nb_fails=nb_fails+1";
     }
+    $query .= " WHERE id=:id;";
 
     # We send the job and write down which server we sent it to
-    $stmt = $db->prepare("UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND) WHERE id=:id;");
+    $stmt = $db->prepare($query);
     if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
       # Output the task information
       echo json_encode(array('errorcode' => 0,

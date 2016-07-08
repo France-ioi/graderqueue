@@ -148,13 +148,12 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['name'] . "</td>";
   echo "<td>" . $row['priority'] . "</td>";
 
-  echo "<td>" . $row['timeout_sec'] . "s<br />";
+  echo "<td>" . $row['timeout_sec'] . "s";
   if($row['nb_fails'] > 0)
   {
-    echo "<font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font></td>";
-  } else {
-    echo "<i>(" . $row['nb_fails'] . " fails)</i></td>";
+    echo "<br /><font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font>";
   }
+  echo "</td>";
 
   echo "<td>Received&nbsp;from&nbsp;#" . $row['received_from'] . "<br />";
   echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
@@ -241,15 +240,18 @@ while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
   echo "<td>" . $row['name'] . "</td>";
-  echo "<td>" . $row['status'] . "</td>";
-  echo "<td>" . $row['priority'] . "</td>";
-  echo "<td>" . $row['timeout_sec'] . "s<br />";
+  if($row['status'] == 'error') {
+    echo "<td><font color=\"darkred\">" . $row['status'] . "</font>";
+  } else {
+    echo "<td>" . $row['status'];
+  }
   if($row['nb_fails'] > 0)
   {
-    echo "<font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font></td>";
-  } else {
-    echo "<i>(" . $row['nb_fails'] . " fails)</i></td>";
+    echo "<br /><font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font>";
   }
+  echo "</td>";
+  echo "<td>" . $row['priority'] . "</td>";
+  echo "<td>" . $row['timeout_sec'] . "s<br />";
   echo "<td>Received&nbsp;from&nbsp;#" . $row['received_from'] . "<br />";
   if($row['sent_to'] > 0) {
     echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
