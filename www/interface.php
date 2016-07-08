@@ -37,6 +37,8 @@ $tid = 0;
 <?php
 if($CFG_accept_interface_tokens) {
 ?>
+<a href="#" onclick="toggleSendJob();">Toggle</a>
+<div class="sendjobarea" style="display: none";>
 <div>
 <form enctype="multipart/form-data" action="api.php" id="jobSend">
 Solution : <input type="file" name="solfile" /> <i>or</i> path <input type="text" name="solpath" /> <i>or</i> <a onclick="$('#solcontentarea').toggle();" href="#form">content</a><br />
@@ -77,6 +79,7 @@ Send <input type="text" name="times" value="1" /> times<br />
   echo "<div><i>Disabled. Set \$CFG_accept_interface_tokens to true in config.inc.php to enable.</i></div>";
 }
 ?>
+</div>
 <a name="servers" />
 <?php
 
@@ -90,7 +93,7 @@ if(isset($_GET['page'])) {
 ##### Servers
 
 echo "<h2>Servers</h2>";
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl_serial</b></td><td><b>ssl_dn</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>jobs</b></td><td><b>last_poll_time</b></td></tr>";
+echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>status</b></td><td><b>ssl info</b></td><td><b>wakeup_url</b></td><td><b>type</b></td><td><b>jobs</b></td><td><b>last_poll_time</b></td></tr>";
 $res = $db->query("
   SELECT servers.*,
     server_types.name AS typename,
@@ -114,11 +117,14 @@ while($row = $res->fetch()) {
   } else {
     echo "<td><font color=\"darkgreen\">polling</font></td>";
   }
-  echo "<td>" . $row['ssl_serial'] . "</td>";
-  echo "<td>" . $row['ssl_dn'] . "</td>";
-  echo "<td>" . $row['wakeup_url'] . "&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a>";
+  echo "<td>";
+  if($row['ssl_serial'] . $row['ssl_dn'] != '') {
+    echo "serial: <span class=\"tooltip\" title=\"" . $row['ssl_dn'] . "\">" . $row['ssl_serial'] . "</span>";
+  }
+  echo "</td>";
+  echo "<td><span class=\"tooltip\" title=\"" . $row['wakeup_url'] . "\"/>URL</span>&nbsp;<a href=\"#servers\" onclick=\"wakeupServer(" . $row['id'] . ")\">Wake-up</a>";
   if($row['wakeup_fails'] > 0) {
-    echo "&nbsp;<font color=\"red\"><i>(" . $row['wakeup_fails'] . " recent failures)</i<</font>";
+    echo "&nbsp;<font color=\"red\"><i>(" . $row['wakeup_fails'] . " wake-up failures)</i<</font>";
   }
   echo "</td>";
   echo "<td>#" . $row['type'] . " : <span class=\"tooltip\" title=\"supports tags " . $row['tags'] . "\">" . $row['typename'] . "</span></td>";
@@ -138,17 +144,14 @@ $nbpages_done = max(1, ceil($res->fetch()[0] / $CFG_res_per_page));
 
 echo "<h2>Tasks done (page " . min($curpage, $nbpages_done) . "/$nbpages_done)</h2>";
 echo make_pages_selector($curpage, $nbpages_done);
-echo "<table border=1><tr><td><b>id</b></td><td><b>name</b></td><td><b>priority</b></td><td><b>timeout_sec</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
+echo "<table border=1><tr><td><b>name</b></td><td><b>meta</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
 $res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
-  echo "<td>job #" . $row['jobid'] . "<br><i>(" . $row['id'] . ")</i></td>";
+  echo "<td>#" . $row['jobid'] . "<br /><i>(" . $row['id'] . ")</i><br />" . $row['name'] . "</td>";
 
-  echo "<td>" . $row['name'] . "</td>";
-  echo "<td>" . $row['priority'] . "</td>";
-
-  echo "<td>" . $row['timeout_sec'] . "s";
+  echo "<td>priority: " . $row['priority'] . "<br />timeout: " . $row['timeout_sec'] . "s";
   if($row['nb_fails'] > 0)
   {
     echo "<br /><font color=\"darkred\">(" . $row['nb_fails'] . " fails)</font>";
@@ -162,10 +165,17 @@ while($row = $res->fetch()) {
   echo "sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['sent_time'] . "\">" . deltatime($row['received_time'], $row['sent_time']) . "</span><br />";
   echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['done_time'] . "\">" . deltatime($row['sent_time'], $row['done_time']) . "</span></td>";
 
-  # Summary of resultdata
+  # Summary
   echo "<td>";
-  $resultdata = json_decode($row['resultdata'], true);
+  try {
+    $jobdata = json_decode($row['jobdata'], true);
+    $taskpath = $jobdata['taskPath'];
+    if($taskpath != '' && $taskpath != '/') {
+      echo "Task: <span class=\"tooltip\" title=\"" . $taskpath . "\">" . basename($taskpath) . "</span></br>";
+    }
+  } finally {}
 
+  $resultdata = json_decode($row['resultdata'], true);
   if(isset($resultdata['errorcode']) && $resultdata['errorcode'] > 0) {
     # Show error
     echo "<a id=\"toggle" . $tid . "\" />";
@@ -175,6 +185,14 @@ while($row = $res->fetch()) {
     $tid += 1;
   } else {
     # No error
+    if(isset($resultdata['errormsg'])) {
+      $errormsg = str_replace("Taskgrader executed successfully.\n", '', $resultdata['errormsg']);
+      if($errormsg != '') {
+        echo "<a href=\"#toggle" . $tid . "\" onclick=\"togglePre(" . $tid . ")\">Toggle server message</a><br />";
+        echo "<pre class=\"toggle" . $tid . "\" style=\"display:none;\">" . $errormsg . "</pre>";
+        $tid += 1;
+      }
+    }
     if(isset($resultdata['jobdata'])) {
       $resultdata = $resultdata['jobdata'];
     } else {
@@ -239,7 +257,11 @@ $res = $db->query("
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>" . $row['id'] . "</td>";
-  echo "<td>" . $row['name'] . "</td>";
+  echo "<td>" . $row['name'];
+  if($row['taskrevision'] != '') {
+    echo "<br />(rev: " . $row['taskrevision'] . ")";
+  }
+  echo "</td>";
   if($row['status'] == 'error') {
     echo "<td><font color=\"darkred\">" . $row['status'] . "</font>";
   } else {
@@ -379,6 +401,11 @@ function prettyPrint(tid) {
     }
   });
 };
+
+function toggleSendJob() {
+  $( ".sendjobarea" ).toggle();
+  return false;
+}
 
 function togglePre(tid) {
   $( ".toggle" + tid ).toggle();

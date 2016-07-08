@@ -48,7 +48,7 @@ if($wakeup_error_servers != '') {
   mail($CFG_admin_email, "[graderqueue] Servers not waking-up", strtr("
 Hi,
 
-The following servers having woken up after a few tries:
+The following servers haven't woken up after a few tries:
 :errorserv
 Please check :url.
 
