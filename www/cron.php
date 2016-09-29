@@ -17,6 +17,9 @@ $stmt->execute(array(':days' => $CFG_keep_old_days));
 $stmt = $db->prepare("DELETE FROM `log` WHERE datetime <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));
 
+# Delete orphan job_types
+$db->query("DELETE FROM `job_types` WHERE NOT EXISTS (SELECT 1 FROM `queue` WHERE `job_types`.`jobid`=`queue`.`id`);");
+
 # Warn about tasks in error / stuck
 $stmt = $db->prepare("
     SELECT COUNT(*) FROM `queue`

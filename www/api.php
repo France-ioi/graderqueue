@@ -177,13 +177,18 @@ if(!isset($request['request'])) {
   $jsondata = json_encode($evaljson);
   $stmt->execute(array(':name' => $jobname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
 
-  $jobid = $db->lastInsertId();
+  $jobid = 0 + $db->lastInsertId();
+
+  # Delete leftover information from old tasks if auto_increment gets reset
+  $stmt = $db->prepare("DELETE FROM `job_types` WHERE jobid= :jobid;");
+  $stmt->execute(array(':jobid' => $jobid));
+
   if(count($typeids) > 0) {
     # Only some server types can execute it
-    $db->query("INSERT INTO `job_types` (jobid, typeid) VALUES (" . $jobid . "," . implode("), (" . $jobid . ",", $typeids) . ");");
+    $db->query("INSERT IGNORE INTO `job_types` (jobid, typeid) VALUES (" . $jobid . "," . implode("), (" . $jobid . ",", $typeids) . ");");
   } else {
     # Set the job to be accepted by any server
-    $db->query("INSERT INTO `job_types` (jobid, typeid) SELECT " . $jobid . ", server_types.id FROM server_types;");
+    $db->query("INSERT IGNORE INTO `job_types` (jobid, typeid) SELECT " . $jobid . ", server_types.id FROM server_types;");
   }
 
   $db->query("COMMIT;");
