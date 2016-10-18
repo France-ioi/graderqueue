@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS `done` (
   `jobid` int(11) NOT NULL,
     -- ID of the job (from the queue table)
   `name` varchar(255) NOT NULL,
+    -- Name identifying the job internally
+  `job_repeats` int(11) NOT NULL DEFAULT '0',
+    -- Number of times a job with the same usertaskid was sent
   `priority` int(11) NOT NULL DEFAULT '0',
     -- Higher number = higher priority
   `timeout_sec` int(11) NOT NULL DEFAULT '300',
