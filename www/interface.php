@@ -159,6 +159,9 @@ while($row = $res->fetch()) {
   echo "</td>";
 
   echo "<td>Received&nbsp;from&nbsp;#" . $row['received_from'] . "<br />";
+  if($row['job_repeats'] > 0) {
+    echo "<font color=\"darkred\">ignored " . $row['job_repeats'] . " repeats</font><br />";
+  }
   echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
 
   echo "<td>Received&nbsp;:&nbsp;" . $row['received_time'] . "<br />";
@@ -275,6 +278,9 @@ while($row = $res->fetch()) {
   echo "<td>" . $row['priority'] . "</td>";
   echo "<td>" . $row['timeout_sec'] . "s<br />";
   echo "<td>Received&nbsp;from&nbsp;#" . $row['received_from'] . "<br />";
+  if($row['job_repeats'] > 0) {
+    echo "<font color=\"darkred\">ignored " . $row['job_repeats'] . " repeats</font><br />";
+  }
   if($row['sent_to'] > 0) {
     echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
   } else {
@@ -342,6 +348,7 @@ $( "#jobSend" ).submit(function( event ) {
   fdata.append("request", "sendsolution");
   times = parseInt(fdata.get('times'));
   for(i = 1; i <= times; i++) {
+    fdata.set("jobusertaskid", 'interface-'+Math.floor(Math.random()*10000000000));
     $( "#jobSendProgress" ).empty().append("<img src=\"res/loading.gif\" /> Sending request "+i+"/"+times+"...");
     $.ajax({
       url: url,

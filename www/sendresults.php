@@ -60,8 +60,8 @@ if($jobrow['received_from'] > 0) {
 # Check error code; if 0 or 1, save the results and don't try again // if 2, retry sending the task
 if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
   # Save the results
-  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata)
-                 SELECT queue.id, queue.name, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.jobdata, NOW(), :resultdata
+  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, job_repeats, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata)
+                 SELECT queue.id, queue.name, queue.job_repeats, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.jobdata, NOW(), :resultdata
                  FROM `queue`
                  WHERE id=:jobid;");
   if($stmt->execute(array(':resultdata' => json_encode($resultdata), ':jobid' => $job_id))) {

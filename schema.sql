@@ -67,6 +67,10 @@ CREATE TABLE IF NOT EXISTS `queue` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
     -- Name identifying the job internally
+  `jobusertaskid` varchar(255) NOT NULL,
+    -- Name uniquely identifying a user-task combination
+  `job_repeats` int(11) NOT NULL DEFAULT '0',
+    -- Number of times a job with the same usertaskid was sent
   `status` enum('queued','sent','error') NOT NULL DEFAULT 'queued',
     -- Status of the job
   `priority` int(11) NOT NULL DEFAULT '0',
@@ -90,7 +94,8 @@ CREATE TABLE IF NOT EXISTS `queue` (
     -- Revision / commit hash the task folder needs to be updated to
   `jobdata` longtext NOT NULL,
     -- JSON data for the job
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `jobusertaskid` (`jobusertaskid`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `remote_users` (

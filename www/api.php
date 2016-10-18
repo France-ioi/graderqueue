@@ -137,6 +137,14 @@ if(!isset($request['request'])) {
         "extraParams" => $paramsjson);
   }
 
+  # Handle the user-task ID
+  if(isset($request['jobusertaskid']) && $request['jobusertaskid'] != '') {
+    $jobusertaskid = $request['jobusertaskid'];
+  } else {
+    # Generate some kind of ID from the request
+    $jobusertaskid = md5(json_encode($request));
+  }
+
   $priority = max(0, intval($request['priority']));
 
   # Add the task revision asked
@@ -171,11 +179,15 @@ if(!isset($request['request'])) {
 
   # Insert into queue
   $db->query("START TRANSACTION;");
+  $db->query("LOCK TABLES queue WRITE, job_types WRITE, server_types READ;");
 
   # Queue entry
-  $stmt = $db->prepare("INSERT INTO `queue` (name, priority, received_from, received_time, tags, taskrevision, jobdata) VALUES(:name, :priority, :recfrom, NOW(), :tags, :taskrevision, :jobdata);");
+  $query  = "INSERT INTO `queue` (name, jobusertaskid, priority, received_from, received_time, tags, taskrevision, jobdata)";
+  $query .= " VALUES(:name, :jobusertaskid, :priority, :recfrom, NOW(), :tags, :taskrevision, :jobdata)";
+  $query .= " ON DUPLICATE KEY UPDATE job_repeats=job_repeats+1, name=VALUES(name), priority=VALUES(priority), received_from=VALUES(received_from), received_time=NOW(), tags=VALUES(tags), taskrevision=VALUES(taskrevision), jobdata=VALUES(jobdata);";
+  $stmt = $db->prepare($query);
   $jsondata = json_encode($evaljson);
-  $stmt->execute(array(':name' => $jobname, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
+  $stmt->execute(array(':name' => $jobname, ':jobusertaskid' => $jobusertaskid, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
 
   $jobid = 0 + $db->lastInsertId();
 
@@ -192,6 +204,7 @@ if(!isset($request['request'])) {
   }
 
   $db->query("COMMIT;");
+  $db->query("UNLOCK TABLES;");
 
   echo json_encode(array('errorcode' => 0, 'errormsg' => "Queued as job ID #" . $jobid . ".", 'jobid' => $jobid));
   flush();
