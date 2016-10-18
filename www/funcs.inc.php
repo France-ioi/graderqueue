@@ -88,7 +88,7 @@ function get_ssl_client_info($table) {
   }
 }
 
-function wake_up_server_by_type($typeids = array()) {
+function wake_up_server_by_type($typeids = array(), $strat = 'default') {
   # Wake up a server if needed
 
   global $db;
@@ -101,8 +101,16 @@ function wake_up_server_by_type($typeids = array()) {
   if(count($typeids) > 0) {
     $query .= " WHERE servers.type IN (" . implode(',', $typeids) . ")";
   }
-  $query .= " GROUP BY servers.id
-    ORDER BY nbjobs DESC, last_poll_time DESC;";
+  $query .= " GROUP BY servers.id";
+
+  if($strat == 'last') {
+    // Try to get all servers to work equally
+    $query .= " ORDER BY last_poll_time ASC, nbjobs ASC;";
+  } else {
+    // default strat 'first'
+    $query .= " ORDER BY nbjobs DESC, last_poll_time DESC;";
+  }
+
   $res = $db->query($query);
   while($row = $res->fetch()) {
     if($row['nbjobs'] < $row['max_concurrent_jobs'] or (time()-strtotime($row['last_poll_time'])) > 20)

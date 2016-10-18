@@ -16,6 +16,13 @@ $CFG_db_database = "";
 # Number of server failures before considering a task as in error
 $CFG_max_fails = 2;
 
+# Wake-up strategy: decides which server to wake-up
+# "first"   wakes up the first idle server when needed; good to keep the number of
+#   servers active low
+# "last"    wakes up the server which didn't poll for the longest time; rotates
+#   effectively between servers, more reactive to bursts
+$CFG_wakeup_strategy = 'first';
+
 
 # public/private key for communication with the platforms
 # Communicate the key name and public key to the platforms you want to communicate with

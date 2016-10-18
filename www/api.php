@@ -197,7 +197,7 @@ if(!isset($request['request'])) {
   flush();
 
   # Wake up a server if needed
-  wake_up_server_by_type($typeids);
+  wake_up_server_by_type($typeids, $CFG_wakeup_strategy);
 
 } elseif($request['request'] == "getjob") {
   # Read job information
