@@ -113,7 +113,7 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
 
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if($row['nbjobs'] < $row['max_concurrent_jobs'] or (time()-strtotime($row['last_poll_time'])) > 20)
+    if($row['nbjobs'] < $row['max_concurrent_jobs'] and (time()-strtotime($row['last_poll_time'])) > 20)
     {
       # Need to wake this server up
       if(wake_up($row['wakeup_url'])) {
