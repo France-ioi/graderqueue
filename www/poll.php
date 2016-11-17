@@ -67,7 +67,7 @@ while(time() - $start_time < 20) {
     $query = "UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
     if($row['status'] == 'sent') {
       # Task was selected because it timed out on last server
-      db_log('error_timeout', $row['id'], $row['sent_to']);
+      db_log('error_timeout', $row['id'], $row['sent_to'], '');
       $query .= ", nb_fails=nb_fails+1";
     }
     $query .= " WHERE id=:id;";
