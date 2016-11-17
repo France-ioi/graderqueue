@@ -302,7 +302,7 @@ def testConnection(opener):
     """Test the connection to the graderqueue.
     opener must be an urllib opener."""
     print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
-    r = opener.open(CFG_GRADERQUEUE_TEST).read().decode('utf-8')
+    r = opener.open(CFG_GRADERQUEUE_TEST, timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
 
     logging.debug("Received: %s" % r)
 
@@ -466,7 +466,8 @@ if __name__ == '__main__':
         # nbtasks=0 means we don't currently have any tasks active
         try:
             r = opener.open(CFG_GRADERQUEUE_POLL,
-                data=urllib.parse.urlencode({'nbtasks': 0}).encode('utf-8')).read().decode('utf-8')
+                data=urllib.parse.urlencode({'nbtasks': 0}).encode('utf-8'),
+                timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
         except Exception as e:
             logging.critical('Error while polling queue: %s' % str(e))
             logging.info('Waiting 3 seconds before new poll...')
@@ -670,7 +671,9 @@ if __name__ == '__main__':
             # Send back results
             logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
             try:
-                resp = opener.open(CFG_GRADERQUEUE_SEND, data=urllib.parse.urlencode(respData).encode('utf-8')).read().decode('utf-8')
+                resp = opener.open(CFG_GRADERQUEUE_SEND,
+                    data=urllib.parse.urlencode(respData).encode('utf-8'),
+                    timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
                 logging.info("Sent results.")
             except Exception as e:
                 logging.critical("Error while sending back results: %s" % str(e))
