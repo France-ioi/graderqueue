@@ -274,6 +274,44 @@ function encode_params_in_token($params, $platform) {
 }
 
 
+
+function extractTaskStat($jobdata, $resultdata) {
+    $res = array(
+        ':cpu_time_ms' => 0,
+        ':real_time_ms' => 0,
+        ':max_real_time_ms' => 0,
+        ':is_success' => 1,
+        ':task_path' => $jobdata['taskPath'],
+        ':task_name' => basename($jobdata['taskPath']),
+        ':language' => $jobdata['extraParams']['solutionLanguage']
+    );
+
+    foreach($resultdata['jobdata']['executions'] as $execution) {
+        foreach($execution['testsReports'] as $report) {
+            //var_dump($report['checker']);die();
+            if(isset($report['checker']) && intval(trim($report['checker']['stdout']['data'])) != 100) {
+                $res[':is_success'] = 0;
+            }
+            $res[':cpu_time_ms'] +=
+                (isset($report['execution']) ? intval($report['execution']['timeTakenMs']) : 0) +
+                (isset($report['checker']) ? intval($report['checker']['timeTakenMs']) : 0) +
+                (isset($report['sanitizer']) ? intval($report['sanitizer']['timeTakenMs']) : 0);
+            $res[':real_time_ms'] +=
+                (isset($report['execution']) ? intval($report['execution']['realTimeTakenMs']) : 0) +
+                (isset($report['checker']) ? intval($report['checker']['realTimeTakenMs']) : 0) +
+                (isset($report['sanitizer']) ? intval($report['sanitizer']['realTimeTakenMs']) : 0);
+
+            if(isset($report['execution'])) {
+                $res[':max_real_time_ms'] = max($res[':max_real_time_ms'], intval($report['execution']['timeTakenMs']));
+            }
+        }
+    }
+    return $res;
+}
+
+
+
+// old interface
 function make_pages_selector($curpage, $nbpages) {
   // Make the pages selector for interface.php, shown before and after each
   // "big" table

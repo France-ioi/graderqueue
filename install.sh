@@ -18,3 +18,8 @@ DB_DB=`grep CFG_db_database www/config.inc.php | head -n 1 | sed 's/^.*\"\(.*\)\
 mysql --host=$DB_HOST --user=$DB_USER --password=$DB_PASS --database=$DB_DB < schema.sql
 
 composer install
+
+
+# migrate database
+cd migrations/
+php 2016-12-15_00-00-00.php

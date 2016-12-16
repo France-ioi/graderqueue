@@ -19,17 +19,7 @@ $tid = 0;
 <head>
   <title>graderqueue interface</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-  <style type="text/css">
-    .tooltip {
-      border-bottom: 1px dotted #000000; color: #000000; outline: none;
-      cursor: help; text-decoration: none;
-      position: relative;
-    }
 
-    table {
-      border-collapse: collapse;
-    }
-  </style>
 </head>
 <body>
 <a name="form" />
@@ -169,6 +159,8 @@ while($row = $res->fetch()) {
   echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['done_time'] . "\">" . deltatime($row['sent_time'], $row['done_time']) . "</span></td>";
 
   # Summary
+
+//TODO: start
   echo "<td>";
   try {
     $jobdata = json_decode($row['jobdata'], true);
@@ -228,6 +220,9 @@ while($row = $res->fetch()) {
     }
   }
   echo "</td>";
+
+//TODO: end
+
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['jobdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";
   $tid += 1;
   echo "<td><textarea width=\"100px\" height=\"100px\" id=\"json" . $tid . "\">" . $row['resultdata'] . "</textarea><a href=\"#pretty\" onclick=\"prettyPrint(" . $tid . ")\"><br />Pretty-print</td>";

@@ -31,7 +31,7 @@ if ($platdata && $request) {
 } elseif ($CFG_accept_interface_tokens && isset($_POST['token'])) {
   # API used through interface.php, check token for validity
   $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
-  $stmt->execute(array(':token' => $request['token']));
+  $stmt->execute(array(':token' => $_POST['token'])); /// TODO: explore that, $request replaced by $_POST
   if($stmt->fetch()) {
     $received_from = -1;
     $platdata = array(
@@ -161,7 +161,7 @@ if(!isset($request['request'])) {
     $tagids = array();
   }
 
-  # Tasks sent by this platform have a tag automatically added    
+  # Tasks sent by this platform have a tag automatically added
   if($platdata['force_tag'] != -1) {
     $tagids[] = $platdata['force_tag'];
   }

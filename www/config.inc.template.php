@@ -79,6 +79,45 @@ $CFG_buttons = array(
 #        "lang" => "c")
 );
 
+
+$CFG_stat_intervals = array(
+    array(
+        'caption' => '15 Minutes',
+        'duration' => 15*60, // sec
+        'tick' => 60 // sec
+    ),
+    array(
+        'caption' => '1 Hour',
+        'duration' => 60*60, // sec
+        'tick' => 5*60 // sec
+    ),
+    array(
+        'caption' => '3 Hours',
+        'duration' => 3*60*60, // sec
+        'tick' => 15*60 // sec
+    ),
+    array(
+        'caption' => '12 Hours',
+        'duration' => 12*60*60, // sec
+        'tick' => 60*60 // sec
+    ),
+    array(
+        'caption' => '1 Day',
+        'duration' => 24*60*60, // sec
+        'tick' => 2*60*60 // sec
+    ),
+    array(
+        'caption' => '1 Week',
+        'duration' => 7*24*60*60, // sec
+        'tick' => 12*60*60 // sec
+    ),
+    array(
+        'caption' => '2 Weeks',
+        'duration' => 14*24*60*60, // sec
+        'tick' => 24*60*60 // sec
+    )
+);
+
 ### End of configuration
 
 try {

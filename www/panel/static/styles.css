@@ -1,0 +1,38 @@
+.navbar {
+    border-radius: 0;
+}
+
+.page-content {
+    padding: 20px;
+}
+
+section {
+    margin-bottom: 15px;
+}
+
+.table-nonfluid {
+    width: auto !important;
+}
+
+.hint {
+    border-bottom: 1px dotted #000000; color: #000000; outline: none;
+    cursor: help; text-decoration: none;
+    position: relative;
+}
+
+.error {
+    color: darkred;
+}
+
+.success {
+    color: darkgreen;
+}
+
+
+.btn-json {
+    cursor: pointer;
+}
+
+.btn-json code {
+    display: none;
+}
