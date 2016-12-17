@@ -42,7 +42,7 @@
             <tbody>
                 <? foreach($result as $row) { ?>
                     <tr>
-                        <td><?=$row[$group_by['field']]?></td>
+                        <td><?=isset($row[$group_by['field']]) ? $row[$group_by['field']] : ''?></td>
                         <td><?=$row['total']?></td>
                         <td><?=$row['total_success']?></td>
                         <td><?=$row['avg_waiting_time']?>s</td>
