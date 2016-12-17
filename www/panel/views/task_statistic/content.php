@@ -24,7 +24,7 @@
 </section>
 
 
-<? if($result) { ?>
+<?php if($result) { ?>
     <section>
         <table class="table table-nofluid">
             <thead>
@@ -40,7 +40,7 @@
                 </tr>
             </thead>
             <tbody>
-                <? foreach($result as $row) { ?>
+                <?php foreach($result as $row) { ?>
                     <tr>
                         <td><?=isset($row[$group_by['field']]) ? $row[$group_by['field']] : ''?></td>
                         <td><?=$row['total']?></td>
@@ -51,10 +51,10 @@
                         <td><?=$row['sum_real_time_ms']?>ms</td>
                         <td><?=$row['total_success'] > 0 ? $row['max_cpu_time'].'ms' : 'n/a'?></td>
                     </tr>
-                <? } ?>
+                <?php } ?>
             </tbody>
         </table>
     </section>
-<? } else { ?>
+<?php } else { ?>
     No data
-<? } ?>
+<?php } ?>
