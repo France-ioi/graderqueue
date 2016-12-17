@@ -1,7 +1,7 @@
 <?php
 
     // interval
-    $interval_idx = intval($_GET['interval']);
+    $interval_idx = isset($_GET['interval']) ? intval($_GET['interval']) : 0;
     if(!$interval_idx) $interval_idx = 0;
     $interval = $CFG_stat_intervals[$interval_idx];
     $interval_end = time();
@@ -20,7 +20,8 @@
         )
     ];
 
-    $group_by_idx = intval($_GET['group_by']);
+
+    $group_by_idx = isset($_GET['group_by']) ? intval($_GET['group_by']) : 0;
     if(!$group_by_idx) $group_by_idx = 0;
     $group_by = $group_by_options[$group_by_idx];
 

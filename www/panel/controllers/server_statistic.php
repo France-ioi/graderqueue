@@ -2,7 +2,7 @@
 
     $queue_size = $db->query('SELECT COUNT(*) FROM queue')->fetch()[0];
 
-    $interval_idx = intval($_GET['interval']);
+    $interval_idx = isset($_GET['interval']) ? intval($_GET['interval']) : 0;
     if(!$interval_idx) $interval_idx = 0;
     $interval = $CFG_stat_intervals[$interval_idx];
 
