@@ -47,9 +47,9 @@
                         <td><?=$row['total_success']?></td>
                         <td><?=$row['avg_waiting_time']?>s</td>
                         <td><?=$row['avg_time_per_task']?>s</td>
-                        <td><?=$row['sum_cpu_time_ms']?>ms</td>
-                        <td><?=$row['sum_real_time_ms']?>ms</td>
-                        <td><?=$row['total_success'] > 0 ? $row['max_cpu_time'].'ms' : 'n/a'?></td>
+                        <td><?=$row['sum_cpu_time_ms']/1000?>s</td>
+                        <td><?=$row['sum_real_time_ms']/1000?>s</td>
+                        <td><?=$row['total_success'] > 0 ? ($row['max_cpu_time']/1000).'s' : 'n/a'?></td>
                     </tr>
                 <?php } ?>
             </tbody>
