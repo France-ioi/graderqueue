@@ -15,6 +15,10 @@
             'caption' => 'Task name'
         ),
         array(
+            'field' => 'task_path',
+            'caption' => 'Task path'
+        ),
+        array(
             'field' => 'language',
             'caption' => 'Language'
         )
