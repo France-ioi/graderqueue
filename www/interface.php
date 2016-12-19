@@ -136,7 +136,7 @@ echo "<h2>Tasks done (page " . min($curpage, $nbpages_done) . "/$nbpages_done)</
 echo make_pages_selector($curpage, $nbpages_done);
 echo "<table border=1><tr><td><b>name</b></td><td><b>meta</b></td><td><b>servers</b></td><td><b>times</b></td><td><b>summary</b></td><td><b>jobdata</b></td><td><b>resultdata</b></td></tr>";
 
-$res = $db->query("SELECT * FROM `done` ORDER BY done_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
+$res = $db->query("SELECT * FROM `done` ORDER BY grading_end_time DESC LIMIT " . (min($curpage, $nbpages_done)-1) * $CFG_res_per_page . ", " . $CFG_res_per_page . ";");
 while($row = $res->fetch()) {
   echo "<tr>";
   echo "<td>#" . $row['jobid'] . "<br /><i>(" . $row['id'] . ")</i><br />" . $row['name'] . "</td>";
@@ -155,8 +155,8 @@ while($row = $res->fetch()) {
   echo "Sent&nbsp;to&nbsp;#" . $row['sent_to'] . "</td>";
 
   echo "<td>Received&nbsp;:&nbsp;" . $row['received_time'] . "<br />";
-  echo "sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['sent_time'] . "\">" . deltatime($row['received_time'], $row['sent_time']) . "</span><br />";
-  echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['done_time'] . "\">" . deltatime($row['sent_time'], $row['done_time']) . "</span></td>";
+  echo "sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['grading_start_time'] . "\">" . deltatime($row['received_time'], $row['grading_start_time']) . "</span><br />";
+  echo "done&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['grading_end_time'] . "\">" . deltatime($row['grading_start_time'], $row['grading_end_time']) . "</span></td>";
 
   # Summary
 
@@ -283,7 +283,7 @@ while($row = $res->fetch()) {
   }
   echo "<td>Received&nbsp;:&nbsp;" . $row['received_time'];
   if($row['sent_to'] > 0) {
-    echo "<br />Sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['sent_time'] . "\">" . deltatime($row['received_time'], $row['sent_time']) . "</span></td>";
+    echo "<br />Sent&nbsp;in&nbsp;<span class=\"tooltip\" title=\"" . $row['grading_start_time'] . "\">" . deltatime($row['received_time'], $row['grading_start_time']) . "</span></td>";
   } else {
     echo "</td>";
   }

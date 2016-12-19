@@ -66,8 +66,8 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
   # Save the results
   $stat_keys = implode(',', array_map(function ($s) { return substr($s, 1); }, array_keys($stat_data)));
   $stat_placeholders = implode(',', array_keys($stat_data));
-  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, job_repeats, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, sent_time, tags, jobdata, done_time, resultdata, ".$stat_keys.")
-                 SELECT queue.id, queue.name, queue.job_repeats, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.sent_time, queue.tags, queue.jobdata, NOW(), :resultdata, ".$stat_placeholders."
+  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, job_repeats, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, grading_start_time, tags, jobdata, grading_end_time, resultdata, ".$stat_keys.")
+                 SELECT queue.id, queue.name, queue.job_repeats, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.grading_start_time, queue.tags, queue.jobdata, NOW(), :resultdata, ".$stat_placeholders."
                  FROM `queue`
                  WHERE id=:jobid;");
 

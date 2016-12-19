@@ -52,7 +52,7 @@ while(time() - $start_time < 20) {
         WHERE sent_to!=:sid
         AND nb_fails<:maxfails
         AND (
-            status='queued' 
+            status='queued'
             OR (timeout_time <= NOW() AND
                 (status='sent' OR status='waiting'))
         )
@@ -64,7 +64,7 @@ while(time() - $start_time < 20) {
 
   if($row = $queuelist->fetch()) {
     # We have a matching job
-    $query = "UPDATE `queue` SET status='sent', sent_to=:sid, sent_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
+    $query = "UPDATE `queue` SET status='sent', sent_to=:sid, grading_start_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
     if($row['status'] == 'sent') {
       # Task was selected because it timed out on last server
       db_log('error_timeout', $row['id'], $row['sent_to'], '');

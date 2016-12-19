@@ -74,7 +74,7 @@
             ),
             HTML::lines(
                 'Received: '.$row['received_time'],
-                $row['sent_to'] > 0 ? "Sent in ".HTML::hint(deltatime($row['received_time'], $row['sent_time']), $row['sent_time']) : null
+                $row['sent_to'] > 0 ? "Sent in ".HTML::hint(deltatime($row['received_time'], $row['grading_start_time']), $row['grading_start_time']) : null
             ),
             HTML::json($row['jobdata'])
         );

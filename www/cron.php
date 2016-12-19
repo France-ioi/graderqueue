@@ -10,9 +10,9 @@ $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AN
 $stmt->execute(array(':maxfails' => $CFG_max_fails));
 
 # Delete old tasks and logs
-$stmt = $db->prepare("DELETE FROM `queue` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day;");
+$stmt = $db->prepare("DELETE FROM `queue` WHERE received_time <= NOW() - INTERVAL :days day AND grading_start_time <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));
-$stmt = $db->prepare("DELETE FROM `done` WHERE received_time <= NOW() - INTERVAL :days day AND sent_time <= NOW() - INTERVAL :days day;");
+$stmt = $db->prepare("DELETE FROM `done` WHERE received_time <= NOW() - INTERVAL :days day AND grading_start_time <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));
 $stmt = $db->prepare("DELETE FROM `log` WHERE datetime <= NOW() - INTERVAL :days day;");
 $stmt->execute(array(':days' => $CFG_keep_old_days));
@@ -37,7 +37,7 @@ Please check :url.
 
 Cheers,
 
--- 
+--
 graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url)));
 }
 
@@ -57,7 +57,7 @@ Please check :url.
 
 Cheers,
 
--- 
+--
 graderqueue", array(':errorserv' => $wakeup_error_servers, ':url' => $CFG_interface_url)));
 }
 ?>

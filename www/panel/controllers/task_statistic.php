@@ -31,7 +31,7 @@
 
 
 
-    $where = ' WHERE done_time BETWEEN FROM_UNIXTIME('.$interval_begin.') AND FROM_UNIXTIME('.$interval_end.')';
+    $where = ' WHERE grading_end_time BETWEEN FROM_UNIXTIME('.$interval_begin.') AND FROM_UNIXTIME('.$interval_end.')';
 
     // common stat
     $result = $db->query('
@@ -41,8 +41,8 @@
             SUM(is_success) as total_success,
             SUM(cpu_time_ms) as sum_cpu_time_ms,
             SUM(real_time_ms) as sum_real_time_ms,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, sent_time)) as avg_waiting_time,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, done_time)) as avg_time_per_task,
+            AVG(TIMESTAMPDIFF(SECOND, received_time, grading_start_time)) as avg_waiting_time,
+            AVG(TIMESTAMPDIFF(SECOND, received_time, grading_end_time)) as avg_time_per_task,
             MAX(IF(is_success=1,max_real_time_ms,0)) as max_cpu_time
         FROM done '.$where.' GROUP BY '.$group_by['field'].' ORDER BY '.$group_by['field']
     )->fetchAll();

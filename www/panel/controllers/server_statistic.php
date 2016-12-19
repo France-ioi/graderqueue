@@ -9,51 +9,41 @@
     $interval_end = time();
     $interval_begin = $interval_end - $interval['duration'];
 
-    // stat
-    $where = ' WHERE done_time BETWEEN FROM_UNIXTIME('.$interval_begin.') AND FROM_UNIXTIME('.$interval_end.')';
-    $overview = $db->query("
+
+    // interval overview
+    $overview = array();
+    $where = ' WHERE grading_end_time <= FROM_UNIXTIME('.$interval_end.') AND grading_end_time >= FROM_UNIXTIME('.$interval_begin.')';
+    $row = $db->query('
         SELECT
             COUNT(*) as tasks_processed,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, done_time)) as avg_time_per_task,
-            AVG(TIMESTAMPDIFF(SECOND, sent_time, done_time)) as avg_time_per_send_back,
-            SUM(nb_fails) as errors_count
-        FROM done ".$where
+            SUM(nb_fails) as errors_count,
+            AVG(TIMESTAMPDIFF(SECOND, received_time, grading_end_time)) as avg_time_per_task,
+            AVG(TIMESTAMPDIFF(SECOND, grading_start_time, grading_end_time)) as avg_time_per_send_back
+        FROM done '.$where
     )->fetch();
-    $overview['avg_queue_size'] = $overview['avg_time_per_task'] * $overview['tasks_processed'] / $interval['duration'];
+    $overview['tasks_processed'] = $row['tasks_processed'];
+    $overview['errors_count'] = $row['errors_count'];
+    $overview['avg_time_per_task'] = $row['avg_time_per_task'];
+    $overview['avg_time_per_send_back'] = $row['avg_time_per_send_back'];
 
-
-    // average number of busy servers
-    $where = ' WHERE done_time >= FROM_UNIXTIME('.$interval_begin.') AND  received_time <= FROM_UNIXTIME('.$interval_end.')';
-    $avg_server_time = $db->query('
+    $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_end.') AND grading_start_time >= FROM_UNIXTIME('.$interval_begin.')';
+    $row = $db->query('
         SELECT
             SUM(
-                LEAST('.$interval_end.', UNIX_TIMESTAMP(done_time)) -
+                LEAST('.$interval_end.', UNIX_TIMESTAMP(grading_end_time)) -
+                GREATEST('.$interval_begin.', UNIX_TIMESTAMP(grading_start_time))
+            ) as sum_server_time,
+            SUM(
+                LEAST('.$interval_end.', UNIX_TIMESTAMP(grading_start_time)) -
                 GREATEST('.$interval_begin.', UNIX_TIMESTAMP(received_time))
-            ) as avg_server_time
+            ) as sum_queue_time
         FROM done '.$where
-    )->fetch()['avg_server_time'];
-    $overview['avg_server_time'] = $avg_server_time / $interval['duration'];
-
+    )->fetch();
+    $overview['avg_queue_size'] = $row['sum_queue_time']  / $interval['duration'];
+    $overview['avg_server_time'] = $row['sum_server_time'] / $interval['duration'];
 
 
     // charts
-    $where = ' WHERE done_time BETWEEN FROM_UNIXTIME('.$interval_begin.') AND FROM_UNIXTIME('.$interval_end.')';
-    $query = $db->query("
-        SELECT
-            COUNT(*) as tasks_processed,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, done_time)) as avg_time_per_task,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, sent_time)) as avg_waiting_time,
-            SUM(cpu_time_ms) as sum_cpu_time_ms,
-            SUM(real_time_ms) as sum_real_time_ms,
-            UNIX_TIMESTAMP(done_time) DIV ".$interval['tick']." as tick_pointer,
-            SUM(
-                LEAST(".$interval['tick']." * (1 + UNIX_TIMESTAMP(done_time) DIV ".$interval['tick']."), UNIX_TIMESTAMP(done_time)) -
-                GREATEST(".$interval['tick']." * (UNIX_TIMESTAMP(done_time) DIV ".$interval['tick']."), UNIX_TIMESTAMP(received_time))
-            ) as avg_server_time
-        FROM done
-        ".$where." GROUP BY tick_pointer"
-    );
-
     $chart_data = array(
         'avg_waiting_time' => array(),
         'sum_cpu_time_ms' => array(),
@@ -62,15 +52,42 @@
         'avg_server_time' => array(),
         'labels' => array()
     );
-    while($row = $query->fetch()) {
+    $interval_tick_begin = $interval_begin;
+
+    while($interval_tick_begin < $interval_end) {
+        $interval_tick_end = $interval_tick_begin + $interval['tick'];
+        $chart_data['labels'][] = date("Y-m-d H:i:s", $interval_tick_begin);
+
+        $where = ' WHERE grading_end_time <= FROM_UNIXTIME('.$interval_tick_end.') AND grading_end_time >= FROM_UNIXTIME('.$interval_tick_begin.')';
+        $row = $db->query('
+            SELECT
+                SUM(cpu_time_ms) as sum_cpu_time_ms,
+                SUM(real_time_ms) as sum_real_time_ms,
+                AVG(TIMESTAMPDIFF(SECOND, received_time, grading_start_time)) as avg_waiting_time
+            FROM done '.$where
+        )->fetch();
         $chart_data['avg_waiting_time'][] = (float) $row['avg_waiting_time'];
         $chart_data['sum_cpu_time_ms'][] = (float) $row['sum_cpu_time_ms'];
         $chart_data['sum_real_time_ms'][] = (float) $row['sum_real_time_ms'];
-        $chart_data['avg_queue_size'][] = (float) $row['avg_time_per_task'] * $row['tasks_processed'] / $interval['tick'];
-        $chart_data['avg_server_time'][] = (float) $row['avg_server_time'] / $interval['tick'];
-        $chart_data['labels'][] = date("Y-m-d H:i:s", $row['tick_pointer'] * $interval['tick']);
-    }
 
+        $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_tick_end.') AND grading_start_time >= FROM_UNIXTIME('.$interval_tick_begin.')';
+        $row = $db->query('
+            SELECT
+                SUM(
+                    LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_end_time)) -
+                    GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(grading_start_time))
+                ) as sum_server_time,
+                SUM(
+                    LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_start_time)) -
+                    GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(received_time))
+                ) as sum_queue_time
+            FROM done '.$where
+        )->fetch();
+        $chart_data['avg_queue_size'][] = (float) $row['sum_queue_time'] / $interval['tick'];
+        $chart_data['avg_server_time'][] = (float) $row['sum_server_time'] / $interval['tick'];
+
+        $interval_tick_begin = $interval_tick_end;
+    }
 
 
     include('views/server_statistic/content.php');
