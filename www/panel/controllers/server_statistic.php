@@ -70,16 +70,18 @@
         $chart_data['sum_cpu_time_ms'][] = (float) $row['sum_cpu_time_ms'];
         $chart_data['sum_real_time_ms'][] = (float) $row['sum_real_time_ms'];
 
-        $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_tick_end.') AND grading_start_time >= FROM_UNIXTIME('.$interval_tick_begin.')';
+        $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_tick_end.') AND grading_end_time >= FROM_UNIXTIME('.$interval_tick_begin.')';
         $row = $db->query('
             SELECT
                 SUM(
-                    LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_end_time)) -
-                    GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(grading_start_time))
+                    GREATEST(0,
+                        LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_end_time)) -
+                        GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(grading_start_time)))
                 ) as sum_server_time,
                 SUM(
-                    LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_start_time)) -
-                    GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(received_time))
+                    GREATEST(0,
+                        LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_start_time)) -
+                        GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(received_time)))
                 ) as sum_queue_time
             FROM done '.$where
         )->fetch();
