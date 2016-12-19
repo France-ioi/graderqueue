@@ -38,11 +38,11 @@
         $params[':language'] = '%'.$filter['language'].'%';
     }
     if(isset($filter['date_start'])) {
-        $where[] = 'done_time >= :date_start';
+        $where[] = 'grading_end_time >= :date_start';
         $params[':date_start'] = $filter['date_start'];
     }
     if(isset($filter['date_end'])) {
-        $where[] = 'done_time <= :date_end';
+        $where[] = 'grading_end_time <= :date_end';
         $params[':date_end'] = $filter['date_end'];
     }
     $where = count($where) > 0 ? ' WHERE '.implode(' AND ', $where) : '';
@@ -53,7 +53,7 @@
     $query->execute($params);
     $res['recordsFiltered'] = $query->fetch()[0];
 
-    $query = $db->prepare('SELECT * FROM `done`'.$where.' ORDER BY done_time DESC'.$limit);
+    $query = $db->prepare('SELECT * FROM `done`'.$where.' ORDER BY grading_end_time DESC'.$limit);
     $query->execute($params);
 
 
@@ -125,8 +125,8 @@
             ),
             HTML::lines(
                 'Received: '.$row['received_time'],
-                'sent in '.HTML::hint(deltatime($row['received_time'], $row['sent_time']), $row['sent_time']),
-                'done in '.HTML::hint(deltatime($row['sent_time'], $row['done_time']), $row['done_time'])
+                'sent in '.HTML::hint(deltatime($row['received_time'], $row['grading_start_time']), $row['grading_start_time']),
+                'done in '.HTML::hint(deltatime($row['grading_start_time'], $row['grading_end_time']), $row['grading_end_time'])
             ),
             HTML::lines($summary),
             HTML::json($row['jobdata']),

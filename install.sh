@@ -23,3 +23,4 @@ composer install
 # migrate database
 cd migrations/
 php 2016-12-15_00-00-00.php
+php 2016-12-19_00-00-00.php
