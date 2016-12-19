@@ -16,19 +16,19 @@
     $row = $db->query('
         SELECT
             COUNT(*) as tasks_processed,
-            SUM(nb_fails) as errors_count
+            SUM(nb_fails) as errors_count,
+            AVG(TIMESTAMPDIFF(SECOND, received_time, grading_end_time)) as avg_time_per_task,
+            AVG(TIMESTAMPDIFF(SECOND, grading_start_time, grading_end_time)) as avg_time_per_send_back
         FROM done '.$where
     )->fetch();
     $overview['tasks_processed'] = $row['tasks_processed'];
     $overview['errors_count'] = $row['errors_count'];
+    $overview['avg_time_per_task'] = $row['avg_time_per_task'];
+    $overview['avg_time_per_send_back'] = $row['avg_time_per_send_back'];
 
     $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_end.') AND grading_start_time >= FROM_UNIXTIME('.$interval_begin.')';
     $row = $db->query('
         SELECT
-            COUNT(*) as tasks_processed,
-            AVG(TIMESTAMPDIFF(SECOND, received_time, grading_end_time)) as avg_time_per_task,
-            AVG(TIMESTAMPDIFF(SECOND, grading_start_time, grading_end_time)) as avg_time_per_send_back,
-            SUM(nb_fails) as errors_count,
             SUM(
                 LEAST('.$interval_end.', UNIX_TIMESTAMP(grading_end_time)) -
                 GREATEST('.$interval_begin.', UNIX_TIMESTAMP(grading_start_time))
@@ -39,8 +39,6 @@
             ) as sum_queue_time
         FROM done '.$where
     )->fetch();
-    $overview['avg_time_per_task'] = $row['avg_time_per_task'];
-    $overview['avg_time_per_send_back'] = $row['avg_time_per_send_back'];
     $overview['avg_queue_size'] = $row['sum_queue_time']  / $interval['duration'];
     $overview['avg_server_time'] = $row['sum_server_time'] / $interval['duration'];
 
@@ -64,16 +62,17 @@
         $row = $db->query('
             SELECT
                 SUM(cpu_time_ms) as sum_cpu_time_ms,
-                SUM(real_time_ms) as sum_real_time_ms
+                SUM(real_time_ms) as sum_real_time_ms,
+                AVG(TIMESTAMPDIFF(SECOND, received_time, grading_start_time)) as avg_waiting_time
             FROM done '.$where
         )->fetch();
+        $chart_data['avg_waiting_time'][] = (float) $row['avg_waiting_time'];
         $chart_data['sum_cpu_time_ms'][] = (float) $row['sum_cpu_time_ms'];
         $chart_data['sum_real_time_ms'][] = (float) $row['sum_real_time_ms'];
 
         $where = ' WHERE received_time <= FROM_UNIXTIME('.$interval_tick_end.') AND grading_start_time >= FROM_UNIXTIME('.$interval_tick_begin.')';
         $row = $db->query('
             SELECT
-                AVG(TIMESTAMPDIFF(SECOND, received_time, grading_start_time)) as avg_waiting_time,
                 SUM(
                     LEAST('.$interval_tick_end.', UNIX_TIMESTAMP(grading_end_time)) -
                     GREATEST('.$interval_tick_begin.', UNIX_TIMESTAMP(grading_start_time))
@@ -84,7 +83,6 @@
                 ) as sum_queue_time
             FROM done '.$where
         )->fetch();
-        $chart_data['avg_waiting_time'][] = (float) $row['avg_waiting_time'];
         $chart_data['avg_queue_size'][] = (float) $row['sum_queue_time'] / $interval['tick'];
         $chart_data['avg_server_time'][] = (float) $row['sum_server_time'] / $interval['tick'];
 
