@@ -95,7 +95,8 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
 
   $query = "
     SELECT servers.*,
-      COUNT(queue.id) AS nbjobs
+      COUNT(queue.id) AS nbjobs,
+      TIMESTAMPDIFF(SECOND, servers.last_poll_time, NOW()) AS last_poll_ago
     FROM `servers`
     LEFT JOIN queue ON queue.sent_to=servers.id AND queue.status='sent'";
   if(count($typeids) > 0) {
@@ -113,8 +114,12 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
 
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if($row['nbjobs'] < $row['max_concurrent_jobs'] and (time()-strtotime($row['last_poll_time'])) > 20)
+    if($row['nbjobs'] < $row['max_concurrent_jobs'])
     {
+      # There's already one server polling which will take this new task
+      if($row['last_poll_ago'] < 20) {
+        return True;
+      }
       # Need to wake this server up
       if(wake_up($row['wakeup_url'])) {
         $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
