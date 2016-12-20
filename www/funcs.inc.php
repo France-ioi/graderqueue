@@ -117,7 +117,7 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
     if($row['nbjobs'] < $row['max_concurrent_jobs'])
     {
       # There's already one server polling which will take this new task
-      if($row['last_poll_ago'] < 20) {
+      if($row['last_poll_ago'] < 18) {
         return True;
       }
       # Need to wake this server up
