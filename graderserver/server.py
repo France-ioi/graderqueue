@@ -254,8 +254,13 @@ class RepositoryHandler(object):
                 # Update folder to rev
                 logging.info("Updating folder to target revision...")
 
+                # Resolve automatically any conflict, or else SVN will just
+                # decide not to update because he loves finding excuses not to
+                # work...
+                subprocess.call(self.svnCmd + ['resolve', '--depth', 'infinity', '--accept', 'theirs-full', foldPath], stdout=DEVNULL, stderr=DEVNULL)
+
                 # Call SVN
-                svnup = subprocess.call(self.svnCmd + ['update', '--parents', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
+                svnup = subprocess.call(self.svnCmd + ['update', '--parents', '--accept', 'theirs-full', '--force', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
 
                 if svnup > 0:
                     # Failure, we return without updating
