@@ -29,7 +29,7 @@ $stmt = $db->prepare("
 $stmt->execute(array(':hours' => $CFG_warn_hours, ':cronintv' => $CFG_cron_interval_hours));
 $row = $stmt->fetch();
 if($row[0] > 0) {
-  mail($CFG_admin_email, "[graderqueue] Tasks in error", strtr("
+  $msg = strtr("
 Hi,
 
 There are :count tasks stuck or in error in the queue.
@@ -38,7 +38,14 @@ Please check :url.
 Cheers,
 
 --
-graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url)));
+graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url));
+  if(gettype($CFG_admin_email) == 'array') {
+    foreach($CFG_admin_email as $recipient) {
+      mail($recipient, "[graderqueue] Tasks in error", $msg);
+    }
+  } else {
+    mail($CFG_admin_email, "[graderqueue] Tasks in error", $msg);
+  }
 }
 
 # Warn about servers not waking-up
@@ -48,7 +55,7 @@ while($row = $stmt->fetch()) {
   $wakeup_error_servers .= $row['name'] . "(" . $row['wakeup_fails'] . " failures, last poll " . $row['last_poll_time'] . ")\n";
 }
 if($wakeup_error_servers != '') {
-  mail($CFG_admin_email, "[graderqueue] Servers not waking-up", strtr("
+  $msg = strtr("
 Hi,
 
 The following servers haven't woken up after a few tries:
@@ -58,6 +65,13 @@ Please check :url.
 Cheers,
 
 --
-graderqueue", array(':errorserv' => $wakeup_error_servers, ':url' => $CFG_interface_url)));
+graderqueue", array(':errorserv' => $wakeup_error_servers, ':url' => $CFG_interface_url));
+  if(gettype($CFG_admin_email) == 'array') {
+    foreach($CFG_admin_email as $recipient) {
+      mail($recipient, "[graderqueue] Servers not waking-up", $msg);
+    }
+  } else {
+    mail($CFG_admin_email, "[graderqueue] Servers not waking-up", $msg);
+  }
 }
 ?>

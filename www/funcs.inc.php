@@ -88,8 +88,9 @@ function get_ssl_client_info($table) {
   }
 }
 
-function wake_up_server_by_type($typeids = array(), $strat = 'default') {
+function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondtry = false) {
   # Wake up a server if needed
+  # If secondtry is true, we try to wake up any matching server
 
   global $db;
 
@@ -114,10 +115,10 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
 
   $res = $db->query($query);
   while($row = $res->fetch()) {
-    if($row['nbjobs'] < $row['max_concurrent_jobs'])
+    if($row['nbjobs'] < $row['max_concurrent_jobs'] || $secondtry)
     {
       # There's already one server polling which will take this new task
-      if($row['last_poll_ago'] < 18) {
+      if($row['last_poll_ago'] < 18 && !$secondtry) {
         return True;
       }
       # Need to wake this server up
@@ -131,7 +132,14 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default') {
       } # If failed we'll try the next server
     }
   }
-  return False;
+
+  if(!$secondtry) {
+    # Try again, but this time we wake up any matching server, starting with
+    # the idle ones
+    return wake_up_server_by_type($typeids, 'last', true);
+  } else {
+    return False;
+  }
 }
 
 function wake_up_server_by_id($sid) {
