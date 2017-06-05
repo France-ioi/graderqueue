@@ -57,9 +57,9 @@
     );
 
     $events = array();
-    $EVENTS_RECEIVED = 0;
-    $EVENTS_START = 1;
-    $EVENTS_END = 2;
+    $EVENTS_RECEIVED = 1;
+    $EVENTS_START = 2;
+    $EVENTS_END = 0;
     $EVENTS_INTERVAL = 3;
 
     $interval_tick_begin = $interval_begin;

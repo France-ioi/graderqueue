@@ -75,10 +75,21 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_waiting_time, label: 'Average waiting time (sec)', fill: false, borderColor: c1 },
-                    { data: chart_data.max_waiting_time, label: 'Max waiting time (sec)', fill: false, borderColor: c2 }
+                    { data: chart_data.avg_waiting_time, label: 'Average waiting time (sec)', fill: false, borderColor: c1, yAxisID: "y-axis-1" },
+                    { data: chart_data.max_waiting_time, label: 'Max waiting time (sec)', fill: false, borderColor: c2, yAxisID: "y-axis-2" }
                 ]
             },
+            options: {
+                scales: { yAxes: [{
+                        type: "linear",
+                        id: "y-axis-1"
+                    }, {
+                        type: "linear",
+                        position: "right",
+                        id: "y-axis-2"
+                    }
+                ]}
+            }
         }
         new Chart.Line($("#chart1"), p);
 
@@ -101,9 +112,20 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_queue_size, label: 'Average length of the queue', fill: false, borderColor: c1 },
-                    { data: chart_data.max_queue_size, label: 'Max length of the queue', fill: false, borderColor: c2 }
+                    { data: chart_data.avg_queue_size, label: 'Average length of the queue', fill: false, borderColor: c1, yAxisID: "y-axis-1" },
+                    { data: chart_data.max_queue_size, label: 'Max length of the queue', fill: false, borderColor: c2, yAxisID: "y-axis-2" }
                 ]
+            },
+            options: {
+                scales: { yAxes: [{
+                        type: "linear",
+                        id: "y-axis-1"
+                    }, {
+                        type: "linear",
+                        position: "right",
+                        id: "y-axis-2"
+                    }
+                ]}
             }
         }
         new Chart.Line($("#chart3"), p);
@@ -114,9 +136,20 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_server_time, label: 'Average number of busy servers', fill: false, borderColor: c1 },
-                    { data: chart_data.max_server_time, label: 'Max number of busy servers', fill: false, borderColor: c2 }
+                    { data: chart_data.avg_server_time, label: 'Average number of busy servers', fill: false, borderColor: c1, yAxisID: "y-axis-1" },
+                    { data: chart_data.max_server_time, label: 'Max number of busy servers', fill: false, borderColor: c2, yAxisID: "y-axis-2" }
                 ]
+            },
+            options: {
+                scales: { yAxes: [{
+                        type: "linear",
+                        id: "y-axis-1"
+                    }, {
+                        type: "linear",
+                        position: "right",
+                        id: "y-axis-2"
+                    }
+                ]}
             }
         }
         new Chart.Line($("#chart4"), p);
