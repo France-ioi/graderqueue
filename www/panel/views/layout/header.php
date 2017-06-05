@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>gradeserver</title>
+        <title>Graderqueue panel</title>
 
         <script src="https://code.jquery.com/jquery-3.1.1.min.js"
             integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
@@ -41,7 +41,7 @@
                     <a href="?controller=servers">Servers</a>
                 </li>
                 <li>
-                    <a href="?controller=server_statistic">Server statistic</a>
+                    <a href="?controller=server_statistic">Server statistics</a>
                 </li>
                 <li>
                     <a href="?controller=send_job">Send job</a>
@@ -53,7 +53,7 @@
                     <a href="?controller=tasks_done">Tasks done</a>
                 </li>
                 <li>
-                    <a href="?controller=task_statistic">Task statistic</a>
+                    <a href="?controller=task_statistic">Task statistics</a>
                 </li>
                 <li>
                     <a href="?controller=log">Log</a>

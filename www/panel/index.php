@@ -7,10 +7,14 @@
 
     if($CFG_accept_interface_tokens) {
         session_start();
-        $token = $_SESSION['token'];
-        $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
-        $stmt->execute(array(':token' => $token));
-        if(!$stmt->fetch()) {
+        $token = false;
+        if(isset($_SESSION['token'])) {
+            $token = $_SESSION['token'];
+            $stmt = $db->prepare("SELECT * FROM `tokens` WHERE expiration_time >= NOW() AND token = :token;");
+            $stmt->execute(array(':token' => $token));
+            $token = $stmt->fetch() ? $token : false;
+        }
+        if(!$token) {
             $token = md5(microtime());
             $stmt = $db->prepare("INSERT INTO `tokens` VALUES(:token, NOW()+INTERVAL 10 MINUTE);");
             $stmt->execute(array(':token' => $token));

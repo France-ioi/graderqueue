@@ -7,7 +7,7 @@
             <label for="interval">Interval</label>
             <select name="interval" id="interval" class="form-control">
                 <?php for($i=0; $i<count($CFG_stat_intervals); $i++) { ?>
-                    <option value="<?=$i?>" <?=($i==$interval_idx ? 'selected="selected"' : '')?>"><?=$CFG_stat_intervals[$i]['caption']?></option>
+                    <option value="<?=$i?>" <?=($i==$interval_idx ? 'selected="selected"' : '')?>><?=$CFG_stat_intervals[$i]['caption']?></option>
                 <?php } ?>
             </select>
         </div>
@@ -75,7 +75,8 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_waiting_time, label: 'Average waiting time (sec)', fill: false, borderColor: c1 }
+                    { data: chart_data.avg_waiting_time, label: 'Average waiting time (sec)', fill: false, borderColor: c1 },
+                    { data: chart_data.max_waiting_time, label: 'Max waiting time (sec)', fill: false, borderColor: c2 }
                 ]
             },
         }
@@ -100,7 +101,8 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_queue_size, label: 'Length of the queue', fill: false, borderColor: c1 }
+                    { data: chart_data.avg_queue_size, label: 'Average length of the queue', fill: false, borderColor: c1 },
+                    { data: chart_data.max_queue_size, label: 'Max length of the queue', fill: false, borderColor: c2 }
                 ]
             }
         }
@@ -112,7 +114,8 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.avg_server_time, label: 'Number of busy servers', fill: false, borderColor: c1 }
+                    { data: chart_data.avg_server_time, label: 'Average number of busy servers', fill: false, borderColor: c1 },
+                    { data: chart_data.max_server_time, label: 'Max number of busy servers', fill: false, borderColor: c2 }
                 ]
             }
         }

@@ -19,9 +19,9 @@ $tid = 0;
 <head>
   <title>graderqueue interface</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-
 </head>
 <body>
+<h2><a href="panel/index.php">New interface</a></h2>
 <a name="form" />
 <h2>Send job</h2>
 <?php
