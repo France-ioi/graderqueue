@@ -155,7 +155,7 @@ if(!isset($request['request'])) {
   }
 
   # Convert tags to list of server types which can execute the job
-  if(isset($_POST['tags'])) {
+  if(isset($request['tags'])) {
     $tagids = tags_to_tagids($request['tags']);
   } else {
     $tagids = array();
