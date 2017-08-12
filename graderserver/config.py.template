@@ -23,6 +23,8 @@ CFG_CLEAN_SCRIPT = '/path/to/clean_cache.py'
 # Path to the taskgrader auto-clean timestamp file
 # (same than CFG_CLEAN_TIMESTAMP in taskgrader's config.py)
 CFG_CLEAN_TIMESTAMP = '/tmp/.taskgrader-autoclean'
+# Minimum free space (in Kb) before launching an evaluation
+CFG_MIN_FREE = 128 * 1024
 
 # Log file (when not specified on command-line)
 CFG_LOGFILE = None

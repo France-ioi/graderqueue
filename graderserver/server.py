@@ -61,7 +61,7 @@ class IdleWorker(object):
         self.genJson = genJson
         self.nextExecute = 0
 
-    def autoClean(self):
+    def autoClean(self, force=False):
         """Execute taskgrader auto-clean script."""
         try:
             lastClean = float(open(CFG_CLEAN_TIMESTAMP, 'r').read())
@@ -73,11 +73,19 @@ class IdleWorker(object):
             cleanProc = subprocess.Popen([CFG_CLEAN_SCRIPT])
             cleanProc.wait()
 
+    def checkFreeSpace(self):
+        """Check free space remaining."""
+        stats = os.statvfs(CFG_TASKGRADER)
+        if stats.f_frsize * stats.f_bavail < CFG_MIN_FREE * 1024:
+            logging.info('Not enough free space, executing auto-clean.')
+            self.autoClean(True)
+
     def execute(self):
         """Execute idle actions."""
         if time.time() > self.nextExecute:
             if self.genJson is not None:
                 self.genJson.getVersion()
+            self.checkFreeSpace()
             self.autoClean()
             self.repoHand.refresh()
             self.nextExecute = time.time() + CFG_IDLEWORKER_INTERVAL
@@ -582,6 +590,9 @@ if __name__ == '__main__':
                 errorMsg += "Error while regenerating defaultParams for task `%s`, exitcode=%d.\n" % (jobdata['taskPath'], gjCode)
 
         logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' % json.dumps(jobdata))
+
+        # Check free space
+        idleWorker.checkFreeSpace()
 
         # Command-line to execute as taskgrader
         cmdline = [CFG_TASKGRADER]
