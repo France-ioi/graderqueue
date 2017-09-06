@@ -64,14 +64,18 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
   $stat_data = extractTaskStat(json_decode($jobrow['jobdata'], true), $resultdata);
 
   # Save the results
-  $stmt = $db->prepare("INSERT INTO `done` (jobid, name, job_repeats, priority, timeout_sec, nb_fails, received_from, received_time, sent_to, grading_start_time, tags, jobdata, grading_end_time, resultdata)
-                 SELECT queue.id, queue.name, queue.job_repeats, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.sent_to, queue.grading_start_time, queue.tags, queue.jobdata, NOW(), :resultdata, ".implode(',', array_keys($stat_data))."
-                 FROM `queue`
-                 WHERE id=:jobid;");
+  $stmt = $db->prepare("
+    INSERT INTO `done`
+      (jobid, name, job_repeats, priority, timeout_sec, nb_fails, received_from, received_time, received_time_php, sent_to, grading_start_time, grading_start_time_php, tags, jobdata, grading_end_time, grading_end_time_php, resultdata)
+    SELECT
+      queue.id, queue.name, queue.job_repeats, queue.priority, queue.timeout_sec, queue.nb_fails, queue.received_from, queue.received_time, queue.received_time_php, queue.sent_to, queue.grading_start_time, queue.grading_start_time_php, queue.tags, queue.jobdata, NOW(), :grading_end_time_php, :resultdata,
+      ".implode(',', array_keys($stat_data))."
+    FROM `queue`
+    WHERE id=:jobid;");
 
   $stmt_params = array_merge(
     $stat_data,
-    array(':resultdata' => json_encode($resultdata), ':jobid' => $job_id)
+    array(':resultdata' => json_encode($resultdata), ':jobid' => $job_id, ':grading_end_time_php' => phpTime())
   );
 
   if($stmt->execute($stmt_params)) {

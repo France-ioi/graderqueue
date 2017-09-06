@@ -182,12 +182,12 @@ if(!isset($request['request'])) {
   $db->query("LOCK TABLES queue WRITE, job_types WRITE, server_types READ;");
 
   # Queue entry
-  $query  = "INSERT INTO `queue` (name, jobusertaskid, priority, received_from, received_time, tags, taskrevision, jobdata)";
-  $query .= " VALUES(:name, :jobusertaskid, :priority, :recfrom, NOW(), :tags, :taskrevision, :jobdata)";
-  $query .= " ON DUPLICATE KEY UPDATE job_repeats=job_repeats+1, name=VALUES(name), priority=VALUES(priority), received_from=VALUES(received_from), received_time=NOW(), tags=VALUES(tags), taskrevision=VALUES(taskrevision), jobdata=VALUES(jobdata);";
+  $query  = "INSERT INTO `queue` (name, jobusertaskid, priority, received_from, received_time, received_time_php, tags, taskrevision, jobdata)";
+  $query .= " VALUES(:name, :jobusertaskid, :priority, :recfrom, NOW(), :received_time_php, :tags, :taskrevision, :jobdata)";
+  $query .= " ON DUPLICATE KEY UPDATE job_repeats=job_repeats+1, name=VALUES(name), priority=VALUES(priority), received_from=VALUES(received_from), received_time=NOW(), received_time_php=:received_time_php, tags=VALUES(tags), taskrevision=VALUES(taskrevision), jobdata=VALUES(jobdata);";
   $stmt = $db->prepare($query);
   $jsondata = json_encode($evaljson);
-  $stmt->execute(array(':name' => $jobname, ':jobusertaskid' => $jobusertaskid, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
+  $stmt->execute(array(':name' => $jobname, ':jobusertaskid' => $jobusertaskid, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata, ':received_time_php' => phpTime()));
 
   $jobid = 0 + $db->lastInsertId();
 

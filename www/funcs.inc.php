@@ -27,6 +27,10 @@ function deltatime($start, $end) {
   }
 }
 
+function phpTime() {
+  return 10000* microtime(true);
+}
+
 
 function jsonerror($code, $msg) {
   # Returns a success or an error as a json

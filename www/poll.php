@@ -64,7 +64,7 @@ while(time() - $start_time < 20) {
 
   if($row = $queuelist->fetch()) {
     # We have a matching job
-    $query = "UPDATE `queue` SET status='sent', sent_to=:sid, grading_start_time=NOW(), timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
+    $query = "UPDATE `queue` SET status='sent', sent_to=:sid, grading_start_time=NOW(), grading_start_time_php=:grading_start_time_php, timeout_time=DATE_ADD(NOW(), INTERVAL timeout_sec SECOND)";
     if($row['status'] == 'sent') {
       # Task was selected because it timed out on last server
       db_log('error_timeout', $row['id'], $row['sent_to'], '');
@@ -74,7 +74,7 @@ while(time() - $start_time < 20) {
 
     # We send the job and write down which server we sent it to
     $stmt = $db->prepare($query);
-    if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
+    if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id'], ':grading_start_time_php' => phpTime()))) {
       # Output the task information
       echo json_encode(array('errorcode' => 0,
             'jobid' => intval($row['id']),
