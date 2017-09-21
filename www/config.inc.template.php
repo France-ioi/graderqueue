@@ -29,7 +29,8 @@ $CFG_wakeup_strategy = 'first';
 $CFG_key_name = "graderqueue.pem.dev";
 $CFG_private_key = "";
 $CFG_public_key = "";
-
+# Debug password; allows platforms to send plaintext requests, leave empty to disable
+$CFG_debug_password = "";
 
 ## cron.php
 # E-mail address to send warnings to

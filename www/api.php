@@ -42,6 +42,13 @@ if ($platdata && $request) {
   }
   $request = $_POST;
   $db->query("DELETE FROM `tokens` WHERE expiration_time < NOW();");
+} elseif(isset($_POST['debugPassword']) && isset($CFG_debug_password) && $CFG_debug_password != '' && $_POST['debugPassword'] == $CFG_debug_password) {
+  # Debug password, used to allow plaintext requests
+  $stmt = $db->prepare("SELECT * FROM platforms WHERE id=1;");
+  $stmt->execute();
+  $platdata = $stmt->fetch();
+  $received_from = 1;
+  $request = $_POST;
 } else {
   die(jsonerror(2, "No valid authentication provided."));
 }
