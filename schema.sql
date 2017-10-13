@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS `done` (
   `returnState` enum('notSent','sent','error') NOT NULL DEFAULT 'notSent',
     -- if return Url worked as expected
   PRIMARY KEY (`id`),
-  KEY `jobid` (`jobid`)
+  KEY `jobid` (`jobid`),
+  KEY `received_time` (`received_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `log` (
