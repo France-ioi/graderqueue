@@ -96,7 +96,12 @@ if(isset($resultdata['errorcode']) and $resultdata['errorcode'] <= 1) {
   }
 } else {
   # Try again sending the task
-  $stmt = $db->prepare("UPDATE `queue` SET sent_to=-1, nb_fails=nb_fails+1, status='queued' WHERE id=:jobid;");
+  $query = "UPDATE `queue` SET status='queued', sent_to=-1";
+  if($resultdata['errorcode'] != 3) {
+    $query .= ", nb_fails=nb_fails+1";
+  }
+  $query.= " WHERE id=:jobid;";
+  $stmt = $db->prepare($query);
   $stmt->execute(array(':jobid' => $job_id));
   db_log('error_in_result', $job_id, $server_id, isset($resultdata['errormsg']) ? $resultdata['errormsg'] : '');
   $db->commit();

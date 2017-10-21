@@ -18,24 +18,38 @@ from config import *
 # subprocess.DEVNULL is only present in python 3.3+.
 DEVNULL = open(os.devnull, 'w')
 
-def listenWakeup(ev):
-    """Listening loop: listen on TCP, set the event ev each time we get a
-    wake-up signal."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
-    logging.info('Started listening for wake-up signals on udp://%s:%s' % (CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
+class WakeupListener(object):
+    """Listens for wakeups."""
+    def __init__(self, ev):
+        self.ev = ev
+        self.ok = True
 
-    while True:
-        (data, addr) = sock.recvfrom(1024)
-        # TODO :: Replace this by a real authentication
-        logging.debug('Wakeup listener received `%s` from %s' % (data, addr))
-        if data == b'wakeup':
-            logging.info('Received valid wake-up signal.')
-            sock.sendto(b'ok', addr)
-            ev.set()
-        else:
-            logging.info('Received invalid wake-up signal.')
-            sock.sendto(b'no', addr)
+    def start(self):
+        self.thread = threading.Thread(target=self._listenWakeup)
+        self.thread.setDaemon(True)
+        self.thread.start()
+
+    def _listenWakeup(self):
+        """Listening loop: listen on TCP, set the event ev each time we get a
+        wake-up signal."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
+        logging.info('Started listening for wake-up signals on udp://%s:%s' % (CFG_WAKEUP_IP, CFG_WAKEUP_PORT))
+
+        while True:
+            (data, addr) = sock.recvfrom(1024)
+            # TODO :: Replace this by a real authentication
+            logging.debug('Wakeup listener received `%s` from %s' % (data, addr))
+            if data == b'wakeup':
+                logging.info('Received valid wake-up signal.')
+                if self.ok:
+                    sock.sendto(b'ok', addr)
+                else:
+                    sock.sendto(b'no', addr)
+                self.ev.set()
+            else:
+                logging.info('Received invalid wake-up signal.')
+                sock.sendto(b'no', addr)
 
 
 def communicateWithTimeout(subProc, timeout=0, input=None):
@@ -472,10 +486,8 @@ if __name__ == '__main__':
     # The Event allows to tell when a wakeup signal has been received
     if args.listen:
         wakeupEvent = threading.Event()
-
-        wakeupThread = threading.Thread(target=listenWakeup, kwargs={'ev': wakeupEvent})
-        wakeupThread.setDaemon(True)
-        wakeupThread.start()
+        wakeupListener = WakeupListener(wakeupEvent)
+        wakeupListener.start()
     else:
         wakeupEvent = None
 
@@ -663,7 +675,7 @@ if __name__ == '__main__':
             respData = {
                 'jobid': jsondata['jobid'],
                 'resultdata': json.dumps({
-                    'errorcode': 2,
+                    'errorcode': 3,
                     'errormsg': 'Server health is not okay, cancelling evaluation.'
                 })}
 
@@ -764,7 +776,9 @@ if __name__ == '__main__':
         if not healthOk:
             # Wait 10 minutes
             logging.info("Waiting 10 minutes for health to regenerate...")
+            wakeupListener.ok = False
             time.sleep(10*60)
+            wakeupListener.ok = True
 
             # Reset healthChecker
             healthChecker.checkHealth()
