@@ -107,10 +107,10 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondt
 
   if($strat == 'last') {
     // Try to get all servers to work equally
-    $query .= " ORDER BY last_poll_time ASC, nbjobs ASC;";
+    $query .= " ORDER BY wakeup_fails ASC, last_poll_time ASC, nbjobs ASC;";
   } else {
     // default strat 'first'
-    $query .= " ORDER BY nbjobs DESC, last_poll_time DESC;";
+    $query .= " ORDER BY wakeup_fails ASC, nbjobs DESC, last_poll_time DESC;";
   }
 
   $res = $db->query($query);
@@ -162,9 +162,26 @@ function wake_up_server_by_id($sid) {
   }
 }
 
+function wake_up_server_by_error() {
+  global $db;
+
+  $stmt = $db->prepare("SELECT id, wakeup_url FROM `servers` WHERE wakeup_fails > 0;");
+  $stmt->execute();
+  while($row = $stmt->fetch()) {
+    if(wake_up($row['wakeup_url'])) {
+      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
+      $stmt->execute(array(':sid' => $row['id']));
+    } else {
+      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
+      $stmt->execute(array(':sid' => $row['id']));
+    }
+  }
+}
+
 function wake_up($url) {
-  if(($fs = fsockopen($url)) !== False)
+  if(($fs = fsockopen($url, -1, $errno, $errstr, 1)) !== False)
   {
+    stream_set_timeout($fs, 1);
     fwrite($fs, 'wakeup');
     $answer = fread($fs, 1024);
     fclose($fs);

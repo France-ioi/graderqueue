@@ -3,7 +3,8 @@
 #
 # http://opensource.org/licenses/MIT
 
-require __DIR__.'/config.inc.php';
+require_once __DIR__.'/config.inc.php';
+require_once __DIR__.'/funcs.inc.php';
 
 # Set tasks in error when their nb_fails is too high
 $stmt = $db->prepare("UPDATE `queue` SET status='error' WHERE status='queued' AND nb_fails>=:maxfails;");
@@ -47,6 +48,9 @@ graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url));
     mail($CFG_admin_email, "[graderqueue] Tasks in error", $msg);
   }
 }
+
+# Try waking-up servers again
+wake_up_server_by_error();
 
 # Warn about servers not waking-up
 $stmt = $db->query("SELECT name, wakeup_fails, last_poll_time FROM `servers` WHERE wakeup_fails >= 3;");
