@@ -341,7 +341,7 @@ class HealthChecker(object):
 
     def checkHealth(self):
         """Check not too many steal ticks happened."""
-        return self._compareSteal() < 0.3
+        return self._compareSteal() < 30
 
 
 def testConnection(opener):
