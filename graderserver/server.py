@@ -311,6 +311,39 @@ class SignalHandler(object):
         return self.flag
 
 
+class HealthChecker(object):
+    """A class to handle checking for server health before/after performing an
+    evaluation. Functions return false if the server health is bad."""
+
+    def __init__(self):
+        self.steal = self._readSteal()
+        self.stealStamp = time.time()
+
+    def _readSteal(self):
+        """Read how many steal ticks happened."""
+        try:
+            statFile = open('/proc/stat', 'r')
+            statLine = statFile.readline().split()
+            return int(statLine[8])
+        except:
+            return 0
+
+    def _compareSteal(self):
+        """Count the % of steal ticks since last time."""
+        newSteal = self._readSteal()
+        newStealStamp = time.time()
+        if newStealStamp == self.stealStamp:
+            return 0
+        ratio = (newSteal - self.steal) / (newStealStamp - self.stealStamp)
+        self.steal = newSteal
+        self.stealStamp = newStealStamp
+        return ratio
+
+    def checkHealth(self):
+        """Check not too many steal ticks happened."""
+        return self._compareSteal() < 0.3
+
+
 def testConnection(opener):
     """Test the connection to the graderqueue.
     opener must be an urllib opener."""
@@ -461,6 +494,7 @@ if __name__ == '__main__':
 
     # Create IdleWorker
     idleWorker = IdleWorker(repoHand, genJson)
+    healthChecker = HealthChecker()
 
     while(True):
         # Main polling loop
@@ -594,28 +628,46 @@ if __name__ == '__main__':
         # Check free space
         idleWorker.checkFreeSpace()
 
-        # Command-line to execute as taskgrader
-        cmdline = [CFG_TASKGRADER]
-        if args.testbehavior == 6:
-            # Test behavior 6: set results as input JSON
-            logging.info("Test behavior 6; using cat as taskgrader...")
-            cmdline = ['/bin/cat']
+        # Check health
+        healthOk = healthChecker.checkHealth()
 
-        # Send to taskgrader
-        proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        (procOut, procErr) = communicateWithTimeout(proc, timeout=CFG_TIMEOUT, input=json.dumps(jobdata))
-        logging.debug('* Output from taskgrader:')
-        logging.debug('stdout: ```\n%s\n```' % procOut)
-        logging.debug('stderr: ```\n%s\n```' % procErr)
+        if healthOk:
+            logging.info("Server health is okay.")
+            # Command-line to execute as taskgrader
+            cmdline = [CFG_TASKGRADER]
+            if args.testbehavior == 6:
+                # Test behavior 6: set results as input JSON
+                logging.info("Test behavior 6; using cat as taskgrader...")
+                cmdline = ['/bin/cat']
 
-        # Read taskgrader output
-        try:
-            evalJson = json.loads(procOut)
-        except:
-            evalJson = None
+            # Send to taskgrader
+            proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            (procOut, procErr) = communicateWithTimeout(proc, timeout=CFG_TIMEOUT, input=json.dumps(jobdata))
+            logging.debug('* Output from taskgrader:')
+            logging.debug('stdout: ```\n%s\n```' % procOut)
+            logging.debug('stderr: ```\n%s\n```' % procErr)
 
-        if evalJson:
+            # Read taskgrader output
+            try:
+                evalJson = json.loads(procOut)
+            except:
+                evalJson = None
+
+            # Check again health
+            healthOk = healthChecker.checkHealth()
+
+        if not healthOk:
+            # Send back an error
+            logging.warning("Server health is not okay, cancelling evaluation and sending back a temporary error.")
+            respData = {
+                'jobid': jsondata['jobid'],
+                'resultdata': json.dumps({
+                    'errorcode': 2,
+                    'errormsg': 'Server health is not okay, cancelling evaluation.'
+                })}
+
+        elif evalJson:
             logging.info("Taskgrader execution successful.")
             # Log a summary of the execution results
             try:
@@ -708,3 +760,13 @@ if __name__ == '__main__':
             respTries += 1
             logging.debug("Waiting 3 seconds before retrying...")
             time.sleep(3)
+
+        if not healthOk:
+            # Wait 10 minutes
+            logging.info("Waiting 10 minutes for health to regenerate...")
+            time.sleep(10*60)
+
+            # Reset healthChecker
+            healthChecker.checkHealth()
+
+        # Loop starts again there
