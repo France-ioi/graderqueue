@@ -4,7 +4,7 @@
         SELECT servers.*,
             server_types.name AS typename,
             GROUP_CONCAT(tags.name SEPARATOR ',') AS tags,
-            COUNT(queue.id) AS nbjobs
+            COUNT(DISTINCT queue.id) AS nbjobs
         FROM `servers`
         LEFT JOIN type_tags ON type_tags.typeid=servers.type
         LEFT JOIN tags ON type_tags.tagid=tags.id

@@ -99,18 +99,19 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondt
       COUNT(queue.id) AS nbjobs,
       TIMESTAMPDIFF(SECOND, servers.last_poll_time, NOW()) AS last_poll_ago
     FROM `servers`
-    LEFT JOIN queue ON queue.sent_to=servers.id AND queue.status='sent'";
+    LEFT JOIN queue ON queue.sent_to=servers.id AND queue.status='sent'
+    WHERE wakeup_fails=0";
   if(count($typeids) > 0) {
-    $query .= " WHERE servers.type IN (" . implode(',', $typeids) . ")";
+    $query .= " AND servers.type IN (" . implode(',', $typeids) . ")";
   }
   $query .= " GROUP BY servers.id";
 
   if($strat == 'last') {
     // Try to get all servers to work equally
-    $query .= " ORDER BY wakeup_fails ASC, last_poll_time ASC, nbjobs ASC;";
+    $query .= " ORDER BY last_poll_time ASC, nbjobs ASC;";
   } else {
     // default strat 'first'
-    $query .= " ORDER BY wakeup_fails ASC, nbjobs DESC, last_poll_time DESC;";
+    $query .= " ORDER BY nbjobs DESC, last_poll_time DESC;";
   }
 
   $res = $db->query($query);
