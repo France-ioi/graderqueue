@@ -26,6 +26,10 @@ CFG_CLEAN_TIMESTAMP = '/tmp/.taskgrader-autoclean'
 # Minimum free space (in Kb) before launching an evaluation
 CFG_MIN_FREE = 128 * 1024
 
+# Minimum memory before launching an evaluation
+# Either a number in Kb, either a string 'X%' of total memory
+CFG_MIN_MEM = 64 * 1024
+
 # Log file (when not specified on command-line)
 CFG_LOGFILE = None
 # Log level, must be 'CRITICAL', 'ERROR', 'WARNING', 'INFO' or 'DEBUG'

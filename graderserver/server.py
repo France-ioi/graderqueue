@@ -333,6 +333,15 @@ class HealthChecker(object):
         self.steal = self._readSteal()
         self.stealStamp = time.time()
 
+        if '%' in str(CFG_MIN_MEM):
+            infos = self._getProcMem()
+            if infos is False:
+                self.minimumMemory = 0
+            else:
+                self.minimumMemory = int(CFG_MIN_MEM[:-1]) * infos['MemTotal'] / 100
+        else:
+            self.minimumMemory = CFG_MIN_MEM
+
     def _readSteal(self):
         """Read how many steal ticks happened."""
         try:
@@ -353,9 +362,40 @@ class HealthChecker(object):
         self.stealStamp = newStealStamp
         return ratio
 
+    def _getProcMem(self):
+        """Gets informations from /proc/meminfo. Returns False if there was an error."""
+        nbFound = 0
+        infos = {}
+        try:
+            for l in open('/proc/meminfo', 'r'):
+                data = l.split()
+                title = data[0][:-1]
+                infos[title] = int(data[1])
+                if title in ['MemTotal', 'MemFree', 'MemAvailable']:
+                    nbFound += 1
+                if nbFound == 3:
+                    break
+            return infos
+        except:
+            return False
+
+    def _checkMemory(self):
+        """Check the memory is within limits set in config."""
+        if not self.minimumMemory:
+            return True # No check done
+        infos = self._getProcMem()
+        if infos is False:
+            return True # Can't check, assume it's ok
+        if 'MemAvailable' in infos:
+            return infos['MemAvailable'] > self.minimumMemory
+        elif 'MemFree' in infos:
+            return infos['MemFree'] > self.minimumMemory
+        else:
+            return True # Can't check, assume it's ok
+
     def checkHealth(self):
         """Check not too many steal ticks happened."""
-        return self._compareSteal() < 30
+        return (self._compareSteal() < 30) and self._checkMemory()
 
 
 def testConnection(opener):
