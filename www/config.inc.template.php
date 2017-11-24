@@ -37,13 +37,14 @@ $CFG_debug_password = "";
 $CFG_admin_email = '';
 # URL to the interface (to include link in the mail)
 $CFG_interface_url = "https://example.com/interface.php";
-# Number of hours between two cron.php executions
-$CFG_cron_interval_hours = 24;
-# Number of hours before warning about a task stuck or in error
-$CFG_warn_hours = 1;
 # Number of days to keep old tasks and logs for
 # All tasks and logs older than this setting will be deleted, regardless or their status
 $CFG_keep_old_days = 7;
+
+# Number of seconds before warning about a task stuck or in error
+$CFG_warn_seconds = 30;
+# Number of tasks exceeding that threshold before sending a warning
+$CFG_warn_nb = 10;
 
 
 ## interface.php
