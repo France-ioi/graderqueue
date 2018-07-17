@@ -1,0 +1,34 @@
+{
+    "docs": [
+        {
+            "location": "/", 
+            "text": "GraderQueue / GraderServer\n\n\nThe grader queue is a queue to relay tasks to be evaluated by grader servers. It receives tasks from platforms such as \nTaskPlatform\n, send them to grader servers according to their priority and tags, and then once evaluated, sends back the results to the platform.\n\n\n\n\nTroubleshooting", 
+            "title": "Home"
+        }, 
+        {
+            "location": "/#graderqueue-graderserver", 
+            "text": "The grader queue is a queue to relay tasks to be evaluated by grader servers. It receives tasks from platforms such as  TaskPlatform , send them to grader servers according to their priority and tags, and then once evaluated, sends back the results to the platform.   Troubleshooting", 
+            "title": "GraderQueue / GraderServer"
+        }, 
+        {
+            "location": "/troubleshooting/", 
+            "text": "Troubleshooting\n\n\nIf the grader queue stops working, here are a few steps to try and find the issue.\n\n\nTasks accumulating in queue\n\n\nIf no tasks are getting evaluated, here are a few things to check :\n\n\n\n\nWhich state are the servers in? Check the section below for more information.\n\n\nCheck the log, a task could be causing issues; the log will contain the ID of the task and the server causing issues\n\n\nRemove the first tasks in the table \nqueue\n and see if it unblocks the queue\n\n\n\n\nServers\n\n\nThe servers can be in multiple statuses :\n\n\n\n\nbusy\n : the server is currently evaluating one or more tasks. If the server doesn't return results after the timeout (default is 5 minutes), the graderqueue will send the task to another server\n\n\npolling\n : the server just connected to the graderqueue, and is waiting for a task but didn't get one yet\n\n\nsleeping\n : the server is waiting for the graderqueue to wake it up; it is currently idle. Note that if a server is \nsleeping\n while there are tasks for it, for less than 10 minutes, it may mean the server is waiting for its health to regenerate (for instance, when an EC2 server is out of credits).\n\n\n\n\nSome commands to help :\n\n\n\n\nsystemctl status graderserver\n will show the last log lines of the graderserver; it will typically show what the server is doing\n\n\nsystemctl restart graderserver\n will restart the graderserver; it may take a few seconds if the graderserver is currently evaluating a task, but a timeout will kill it to restart it if it takes too long\n\n\n\n\nSome logs to look at (on France-ioi's installation) :\n\n\n\n\n/var/log/graderserver.log\n : graderserver log\n\n\n/home/grader/taskgrader/taskgrader.log\n : taskgrader log\n\n\n\n\nThese logs will generally contain some more information about :\n\n\n\n\nwhether the server is receiving tasks to evaluate (and their ID)\n\n\nwhether it manages to fetch the task data from the repository\n\n\nwhether it manages to execute the taskgrader for evaluating the task\n\n\nwhether the taskgrader evaluated successfully\n\n\nsome basic results about the task", 
+            "title": "Troubleshooting"
+        }, 
+        {
+            "location": "/troubleshooting/#troubleshooting", 
+            "text": "If the grader queue stops working, here are a few steps to try and find the issue.", 
+            "title": "Troubleshooting"
+        }, 
+        {
+            "location": "/troubleshooting/#tasks-accumulating-in-queue", 
+            "text": "If no tasks are getting evaluated, here are a few things to check :   Which state are the servers in? Check the section below for more information.  Check the log, a task could be causing issues; the log will contain the ID of the task and the server causing issues  Remove the first tasks in the table  queue  and see if it unblocks the queue", 
+            "title": "Tasks accumulating in queue"
+        }, 
+        {
+            "location": "/troubleshooting/#servers", 
+            "text": "The servers can be in multiple statuses :   busy  : the server is currently evaluating one or more tasks. If the server doesn't return results after the timeout (default is 5 minutes), the graderqueue will send the task to another server  polling  : the server just connected to the graderqueue, and is waiting for a task but didn't get one yet  sleeping  : the server is waiting for the graderqueue to wake it up; it is currently idle. Note that if a server is  sleeping  while there are tasks for it, for less than 10 minutes, it may mean the server is waiting for its health to regenerate (for instance, when an EC2 server is out of credits).   Some commands to help :   systemctl status graderserver  will show the last log lines of the graderserver; it will typically show what the server is doing  systemctl restart graderserver  will restart the graderserver; it may take a few seconds if the graderserver is currently evaluating a task, but a timeout will kill it to restart it if it takes too long   Some logs to look at (on France-ioi's installation) :   /var/log/graderserver.log  : graderserver log  /home/grader/taskgrader/taskgrader.log  : taskgrader log   These logs will generally contain some more information about :   whether the server is receiving tasks to evaluate (and their ID)  whether it manages to fetch the task data from the repository  whether it manages to execute the taskgrader for evaluating the task  whether the taskgrader evaluated successfully  some basic results about the task", 
+            "title": "Servers"
+        }
+    ]
+}
