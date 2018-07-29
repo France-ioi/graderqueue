@@ -1,5 +1,7 @@
 <?php
 
+    ini_set('memory_limit', '256M');
+
     $queue_size = $db->query('SELECT COUNT(*) FROM queue')->fetch()[0];
 
     $interval_idx = isset($_GET['interval']) ? intval($_GET['interval']) : 0;
@@ -78,43 +80,7 @@
 
     $db->query('INSERT INTO chart_intervals VALUES '.implode(',', $intervals));
 
-    $stmt = $db->query('
-        SELECT
-            SUM(done.cpu_time_ms) as sum_cpu_time_ms,
-            SUM(done.real_time_ms) as sum_real_time_ms,
-            AVG(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as avg_waiting_time,
-            MAX(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as max_waiting_time
-        FROM chart_intervals
-        LEFT JOIN done
-        ON grading_end_time <= FROM_UNIXTIME(interval_tick_end) AND grading_end_time >= FROM_UNIXTIME(interval_tick_begin)
-        GROUP BY interval_tick_begin');
-    while($row = $stmt->fetch()) {
-        $chart_data['sum_cpu_time_ms'][] = (float) $row['sum_cpu_time_ms'];
-        $chart_data['sum_real_time_ms'][] = (float) $row['sum_real_time_ms'];
-        $chart_data['avg_waiting_time'][] = (float) $row['avg_waiting_time'];
-        $chart_data['max_waiting_time'][] = (float) $row['max_waiting_time'];
-    }
-
-    $stmt = $db->query('
-        SELECT
-            SUM(
-                GREATEST(0,
-                    LEAST(chart_intervals.interval_tick_end, UNIX_TIMESTAMP(done.grading_end_time)) -
-                    GREATEST(chart_intervals.interval_tick_begin, UNIX_TIMESTAMP(done.grading_start_time)))
-            ) as sum_server_time,
-            SUM(
-                GREATEST(0,
-                    LEAST(chart_intervals.interval_tick_end, UNIX_TIMESTAMP(done.grading_start_time)) -
-                    GREATEST(chart_intervals.interval_tick_begin, UNIX_TIMESTAMP(done.received_time)))
-            ) as sum_queue_time
-        FROM chart_intervals
-        LEFT JOIN done
-        ON done.received_time <= FROM_UNIXTIME(chart_intervals.interval_tick_end) AND done.grading_end_time >= FROM_UNIXTIME(chart_intervals.interval_tick_begin)
-        GROUP BY interval_tick_begin');
-    while($row = $stmt->fetch()) {
-        $chart_data['avg_queue_size'][] = (float) $row['sum_queue_time'] / $interval['tick'];
-        $chart_data['avg_server_time'][] = (float) $row['sum_server_time'] / $interval['tick'];
-    }
+    unset($intervals);
 
     // Compute max queue size and busy servers
     // Fetch all events
@@ -161,16 +127,57 @@
                 break;
             case $EVENTS_START:
                 // Started grading a task
+                $cur_queue -= 1;
                 $cur_server += 1;
                 break;
             case $EVENTS_END:
                 // Finished grading a task
                 $max_queue = max($max_queue, $cur_queue);
                 $max_server = max($max_server, $cur_server);
-                $cur_queue -= 1;
                 $cur_server -= 1;
                 break;
         }
+    }
+
+    unset($events);
+
+
+    $stmt = $db->query('
+        SELECT
+            SUM(done.cpu_time_ms) as sum_cpu_time_ms,
+            SUM(done.real_time_ms) as sum_real_time_ms,
+            AVG(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as avg_waiting_time,
+            MAX(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as max_waiting_time
+        FROM chart_intervals
+        LEFT JOIN done
+        ON grading_end_time <= FROM_UNIXTIME(interval_tick_end) AND grading_end_time >= FROM_UNIXTIME(interval_tick_begin)
+        GROUP BY interval_tick_begin');
+    while($row = $stmt->fetch()) {
+        $chart_data['sum_cpu_time_ms'][] = (float) $row['sum_cpu_time_ms'];
+        $chart_data['sum_real_time_ms'][] = (float) $row['sum_real_time_ms'];
+        $chart_data['avg_waiting_time'][] = (float) $row['avg_waiting_time'];
+        $chart_data['max_waiting_time'][] = (float) $row['max_waiting_time'];
+    }
+
+    $stmt = $db->query('
+        SELECT
+            SUM(
+                GREATEST(0,
+                    LEAST(chart_intervals.interval_tick_end, UNIX_TIMESTAMP(done.grading_end_time)) -
+                    GREATEST(chart_intervals.interval_tick_begin, UNIX_TIMESTAMP(done.grading_start_time)))
+            ) as sum_server_time,
+            SUM(
+                GREATEST(0,
+                    LEAST(chart_intervals.interval_tick_end, UNIX_TIMESTAMP(done.grading_start_time)) -
+                    GREATEST(chart_intervals.interval_tick_begin, UNIX_TIMESTAMP(done.received_time)))
+            ) as sum_queue_time
+        FROM chart_intervals
+        LEFT JOIN done
+        ON done.received_time <= FROM_UNIXTIME(chart_intervals.interval_tick_end) AND done.grading_end_time >= FROM_UNIXTIME(chart_intervals.interval_tick_begin)
+        GROUP BY interval_tick_begin');
+    while($row = $stmt->fetch()) {
+        $chart_data['avg_queue_size'][] = (float) $row['sum_queue_time'] / $interval['tick'];
+        $chart_data['avg_server_time'][] = (float) $row['sum_server_time'] / $interval['tick'];
     }
 
     include('views/server_statistic/content.php');
