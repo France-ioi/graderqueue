@@ -191,7 +191,7 @@ if(!isset($request['request'])) {
   # Queue entry
   $query  = "INSERT INTO `queue` (name, jobusertaskid, priority, received_from, received_time, tags, taskrevision, jobdata)";
   $query .= " VALUES(:name, :jobusertaskid, :priority, :recfrom, NOW(), :tags, :taskrevision, :jobdata)";
-  $query .= " ON DUPLICATE KEY UPDATE job_repeats=job_repeats+1, name=VALUES(name), priority=VALUES(priority), status=IF(STRCMP(status, 'error'), 'queued', status), tags=VALUES(tags), taskrevision=VALUES(taskrevision), jobdata=VALUES(jobdata);";
+  $query .= " ON DUPLICATE KEY UPDATE job_repeats=job_repeats+1, name=VALUES(name), priority=VALUES(priority), status=IF(STRCMP(status, 'error'), 'queued', status), nb_fails=0, tags=VALUES(tags), taskrevision=VALUES(taskrevision), jobdata=VALUES(jobdata);";
   $stmt = $db->prepare($query);
   $jsondata = json_encode($evaljson);
   $stmt->execute(array(':name' => $jobname, ':jobusertaskid' => $jobusertaskid, ':priority' => $priority, ':recfrom' => $received_from, ':tags' => $request['tags'], ':taskrevision' => $taskrevision, ':jobdata' => $jsondata));
