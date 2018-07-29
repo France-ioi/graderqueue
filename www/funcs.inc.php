@@ -170,11 +170,11 @@ function wake_up_server_by_error() {
   $stmt->execute();
   while($row = $stmt->fetch()) {
     if(wake_up($row['wakeup_url'])) {
-      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
-      $stmt->execute(array(':sid' => $row['id']));
+      $stmt2 = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
+      $stmt2->execute(array(':sid' => $row['id']));
     } else {
-      $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
-      $stmt->execute(array(':sid' => $row['id']));
+      $stmt2 = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
+      $stmt2->execute(array(':sid' => $row['id']));
     }
   }
 }

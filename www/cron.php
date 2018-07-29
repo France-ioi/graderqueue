@@ -29,12 +29,12 @@ if($hourly) {
 # Warn about tasks in error / stuck
 $stmt = $db->prepare("
     SELECT COUNT(*) FROM `queue`
-    WHERE received_time >= NOW() - INTERVAL 5 minute
+    WHERE received_time >= NOW() - INTERVAL 5 minute - INTERVAL :seconds second
     AND received_time <= NOW() - INTERVAL :seconds second
     AND (status = 'queued' OR status = 'error');");
 $stmt->execute(array(':seconds' => $CFG_warn_seconds));
-$row = $stmt->fetch();
-if($row[0] > $CFG_warn_nb) {
+$count = $stmt->fetchColumn();
+if($count >= $CFG_warn_nb) {
   $msg = strtr("
 Hi,
 
@@ -44,7 +44,7 @@ Please check :url.
 Cheers,
 
 --
-graderqueue", array(':count' => $row[0], ':url' => $CFG_interface_url));
+graderqueue", array(':count' => $count, ':url' => $CFG_interface_url));
   if(gettype($CFG_admin_email) == 'array') {
     foreach($CFG_admin_email as $recipient) {
       mail($recipient, "[graderqueue] Tasks in error", $msg);
