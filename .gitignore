@@ -1,3 +1,4 @@
+certs/
 www/config.inc.php
 graderserver/config.py
 vendor/
