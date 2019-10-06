@@ -10,8 +10,8 @@
 # See https://github.com/France-ioi/graderqueue .
 
 
-import argparse, json, logging, os, signal, socket, ssl, sys, subprocess
-import threading, time, xml.dom.minidom
+import argparse, io, json, logging, os, requests, shutil, signal, socket, ssl
+import sys, subprocess, threading, time, xml.dom.minidom, zipfile
 import urllib.request, urllib.parse, urllib2_ssl
 from config import *
 
@@ -221,8 +221,44 @@ class RepositoryHandler(object):
                     # sent to the graderqueue
                     logging.warning(str(e))
 
+    def getTargetPath(self, folder):
+        """Get the path at which a task will be stored."""
+        if folder[0:4] == 'zip:':
+            return os.path.join(CFG_ZIP_TARGET, folder[4:]) + '/'
+        else:
+            return jobdata['taskPath'].replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)
+
     def update(self, folder, rev='HEAD'):
         """Update a folder to revision 'rev'."""
+        if folder[0:4] == 'zip:':
+            self.zipUpdate(folder, rev)
+        else:
+            self.svnUpdate(folder, rev)
+
+    def zipUpdate(self, folder, rev=0):
+        """Download a zipped task."""
+        zipId = folder[4:]
+        logging.info('Performing zip update with ID `%s`.' % zipId)
+        foldPath = self.getTargetPath(folder)
+        try:
+            shutil.rmtree(foldPath, ignore_errors=True)
+        except:
+            pass
+        try:
+            os.makedir(foldPath)
+        except:
+            pass
+
+        r = requests.get(CFG_ZIP_REPOSITORY % zipId, stream=True)
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        z.extractall(path=foldPath)
+
+        self.subFolders[foldPath] = rev
+
+        return True
+
+    def svnUpdate(self, folder, rev='HEAD'):
+        """Update a SVN folder to revision 'rev'."""
         foldPath = os.path.realpath(folder.replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)) + '/'
         curRepo = None
         for repo in self.repositories:
@@ -641,7 +677,7 @@ if __name__ == '__main__':
 
         # Handle paths
         jobdata['rootPath'] = CFG_GRADERQUEUE_ROOT
-        taskPath = jobdata['taskPath'].replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)
+        taskPath = repoHand.getTargetPath(jobdata['taskPath'])
         if 'restrictToPaths' in jobdata:
             jobdata['restrictToPaths'] = [Template(p).safe_substitute(CFG_GRADERQUEUE_VARS) for p in jobdata['restrictToPaths']]
             jobdata['restrictToPaths'].extend(CFG_SERVER_RESTRICT)
@@ -653,7 +689,7 @@ if __name__ == '__main__':
         if jsondata.get('taskrevision', ''):
             logging.info("Updating `%s` to revision '%s' if needed..." % (taskPath, jsondata['taskrevision']))
             try:
-                repoUp = repoHand.update(taskPath, rev=jsondata['taskrevision'])
+                repoUp = repoHand.update(jobdata['taskPath'], rev=jsondata['taskrevision'])
             except Exception as e:
                 logging.warning("Couldn't update task `%s` to revision '%s': %s." % (taskPath, jsondata['taskrevision'], str(e)))
                 errorMsg += "Couldn't update task `%s` to revision '%s'.\n" % (jobdata['taskPath'], jsondata['taskrevision'])
@@ -674,6 +710,8 @@ if __name__ == '__main__':
             elif gjCode > 0:
                 logging.warning("Error while regenerating defaultParams for task `%s`, exitcode=%d." % (taskPath, gjCode))
                 errorMsg += "Error while regenerating defaultParams for task `%s`, exitcode=%d.\n" % (jobdata['taskPath'], gjCode)
+
+        jobdata['taskPath'] = taskPath
 
         logging.debug('JSON to be sent to taskgrader: ```\n%s\n```' % json.dumps(jobdata))
 

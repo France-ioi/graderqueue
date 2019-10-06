@@ -91,4 +91,8 @@ CFG_SSL_CHECKER = None
 CFG_SSL_KEY = ''  # local.key
 CFG_SSL_CERT = '' # local.crt
 
+CFG_ZIP_TARGET = '/path/for/zips/'
+CFG_ZIP_REPOSITORY = 'http://example.com/files/zips/%s.zip'
+
+
 ##### END OF CONFIGURATION #####
