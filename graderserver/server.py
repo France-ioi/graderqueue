@@ -231,9 +231,9 @@ class RepositoryHandler(object):
     def update(self, folder, rev='HEAD'):
         """Update a folder to revision 'rev'."""
         if folder[0:4] == 'zip:':
-            self.zipUpdate(folder, rev)
+            return self.zipUpdate(folder, rev)
         else:
-            self.svnUpdate(folder, rev)
+            return self.svnUpdate(folder, rev)
 
     def zipUpdate(self, folder, rev=0):
         """Download a zipped task."""
