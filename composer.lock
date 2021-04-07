@@ -1,10 +1,9 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "hash": "1bec7fc6782209f38344da1ffa0331e7",
     "content-hash": "7074f1cdb2bf1f3e807435e98d252f1b",
     "packages": [
         {
@@ -58,20 +57,20 @@
                 "assertion",
                 "validation"
             ],
-            "time": "2015-08-21 16:50:17"
+            "time": "2015-08-21T16:50:17+00:00"
         },
         {
             "name": "phpseclib/phpseclib",
-            "version": "2.0.1",
+            "version": "2.0.31",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpseclib/phpseclib.git",
-                "reference": "ba6fb78f727cd09f2a649113b95468019e490585"
+                "reference": "233a920cb38636a43b18d428f9a8db1f0a1a08f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/ba6fb78f727cd09f2a649113b95468019e490585",
-                "reference": "ba6fb78f727cd09f2a649113b95468019e490585",
+                "url": "https://api.github.com/repos/phpseclib/phpseclib/zipball/233a920cb38636a43b18d428f9a8db1f0a1a08f4",
+                "reference": "233a920cb38636a43b18d428f9a8db1f0a1a08f4",
                 "shasum": ""
             },
             "require": {
@@ -79,8 +78,7 @@
             },
             "require-dev": {
                 "phing/phing": "~2.7",
-                "phpunit/phpunit": "~4.0",
-                "sami/sami": "~2.0",
+                "phpunit/phpunit": "^4.8.35|^5.7|^6.0|^9.4",
                 "squizlabs/php_codesniffer": "~2.0"
             },
             "suggest": {
@@ -91,6 +89,9 @@
             },
             "type": "library",
             "autoload": {
+                "files": [
+                    "phpseclib/bootstrap.php"
+                ],
                 "psr-4": {
                     "phpseclib\\": "phpseclib/"
                 }
@@ -147,7 +148,25 @@
                 "x.509",
                 "x509"
             ],
-            "time": "2016-01-18 17:07:21"
+            "support": {
+                "issues": "https://github.com/phpseclib/phpseclib/issues",
+                "source": "https://github.com/phpseclib/phpseclib/tree/2.0.31"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/terrafrost",
+                    "type": "github"
+                },
+                {
+                    "url": "https://www.patreon.com/phpseclib",
+                    "type": "patreon"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/phpseclib/phpseclib",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2021-04-06T13:56:45+00:00"
         },
         {
             "name": "spomky-labs/aes-key-wrap",
@@ -209,7 +228,7 @@
                 "padding",
                 "wrap"
             ],
-            "time": "2016-03-03 12:07:19"
+            "time": "2016-03-03T12:07:19+00:00"
         },
         {
             "name": "spomky-labs/base64url",
@@ -261,7 +280,7 @@
                 "safe",
                 "url"
             ],
-            "time": "2016-01-21 19:50:30"
+            "time": "2016-01-21T19:50:30+00:00"
         },
         {
             "name": "spomky-labs/jose",
@@ -337,7 +356,7 @@
                 "jwa",
                 "jwt"
             ],
-            "time": "2016-02-21 10:50:42"
+            "time": "2016-02-21T10:50:42+00:00"
         }
     ],
     "packages-dev": [],
@@ -353,5 +372,6 @@
         "lib-openssl": "*",
         "lib-curl": "*"
     },
-    "platform-dev": []
+    "platform-dev": [],
+    "plugin-api-version": "2.0.0"
 }
