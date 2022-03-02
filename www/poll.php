@@ -8,6 +8,8 @@ require("config.inc.php");
 if($servdata = get_ssl_client_info('servers')) {
   # Client was identified by a SSL client certificate
   $server_id = $servdata['id'];
+} elseif($servdata = auth_graderserver_by_token()) {
+  $server_id = $servdata['id'];
 } else {
   die(jsonerror(3, "No valid authentication provided."));
 }

@@ -434,17 +434,52 @@ class HealthChecker(object):
         return (self._compareSteal() < 30) and self._checkMemory()
 
 
+class RequestHandler():
+    def open(url, data):
+        pass
+
+
+class SSLCertHandler(RequestHandler):
+    def __init__(self):
+        opener = urllib.request.build_opener(urllib2_ssl.HTTPSHandler(
+            key_file=CFG_SSL_KEY,
+            cert_file=CFG_SSL_CERT,
+            ca_certs=CFG_SSL_CA,
+            server_hostname=CFG_SSL_HOSTNAME,
+            checker=CFG_SSL_CHECKER))
+
+    def open(self, url, data=None):
+        if data is not None:
+            data = urllib.parse.urlencode(data).encode('utf-8')
+        r = opener.open(url, data=data, timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
+        try:
+            jsondata = json.loads(r)
+            return jsondata
+        except:
+            return None
+
+
+class TokenHandler(RequestHandler):
+    def open(self, url, data):
+        data['server_token'] = CFG_TOKEN
+        try:
+            req = requests.post(url, data=data)
+            logging.debug(req.text)
+            return req.json()
+        except:
+            return None
+
+
+
 def testConnection(opener):
     """Test the connection to the graderqueue.
     opener must be an urllib opener."""
     print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
-    r = opener.open(CFG_GRADERQUEUE_TEST, timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
+    jsondata = opener.open(CFG_GRADERQUEUE_TEST)
 
     logging.debug("Received: %s" % r)
 
-    try:
-        jsondata = json.loads(r)
-    except:
+    if jsondata is None:
         print("Error: received invalid JSON data: `%s`.\nTest failed." % r)
         return 1
 
@@ -523,12 +558,10 @@ if __name__ == '__main__':
         logging.getLogger().addHandler(logStderr)
 
     # HTTPS layer
-    opener = urllib.request.build_opener(urllib2_ssl.HTTPSHandler(
-            key_file=CFG_SSL_KEY,
-            cert_file=CFG_SSL_CERT,
-            ca_certs=CFG_SSL_CA,
-            server_hostname=CFG_SSL_HOSTNAME,
-            checker=CFG_SSL_CHECKER))
+    if CFG_TOKEN is not None:
+        opener = TokenHandler()
+    else:
+        opener = SSLCertHandler()
 
     # Test mode: try communicating with the graderqueue
     if args.testconnection:
@@ -600,27 +633,23 @@ if __name__ == '__main__':
         logging.info('Polling the graderqueue at `%s`...' % CFG_GRADERQUEUE_POLL)
         # nbtasks=0 means we don't currently have any tasks active
         try:
-            r = opener.open(CFG_GRADERQUEUE_POLL,
-                data=urllib.parse.urlencode({'nbtasks': 0}).encode('utf-8'),
-                timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
+            jsondata = opener.open(CFG_GRADERQUEUE_POLL, data={'nbtasks': 0})
         except Exception as e:
             logging.critical('Error while polling queue: %s' % str(e))
             logging.info('Waiting 3 seconds before new poll...')
             time.sleep(3)
             continue
 
-        try:
-            jsondata = json.loads(r)
-        except:
+        if jsondata is None:
             logging.critical('Error: Taskqueue returned non-JSON data.')
-            logging.debug('Received: %s' % r)
+            logging.debug('Received: %s' % jsondata)
             logging.info('Waiting 3 seconds before new poll...')
             time.sleep(3)
             continue
 
         if 'errorcode' not in jsondata:
             logging.critical('Error: Taskqueue returned data without errorcode.')
-            logging.debug('Received: %s' % r)
+            logging.debug('Received: %s' % jsondata)
             logging.info('Waiting 3 seconds before new poll...')
             time.sleep(3)
             continue
@@ -829,9 +858,7 @@ if __name__ == '__main__':
             # Send back results
             logging.info("Sending results back to `%s`..." % CFG_GRADERQUEUE_SEND)
             try:
-                resp = opener.open(CFG_GRADERQUEUE_SEND,
-                    data=urllib.parse.urlencode(respData).encode('utf-8'),
-                    timeout=CFG_GRADERQUEUE_TIMEOUT).read().decode('utf-8')
+                respJson = opener.open(CFG_GRADERQUEUE_SEND, data=respData)
                 logging.info("Sent results.")
             except Exception as e:
                 logging.critical("Error while sending back results: %s" % str(e))
@@ -840,12 +867,11 @@ if __name__ == '__main__':
                 time.sleep(3)
                 continue
 
-            try:
-                respJson = json.loads(resp)
+            if respJson is not None:
                 logging.info("Taskqueue response: (%d) %s" % (respJson['errorcode'], respJson['errormsg']))
                 if respJson['errorcode'] == 0:
                     break
-            except:
+            else:
                 logging.critical("Error: Taskqueue answered results with invalid data (%s)" % resp)
             respTries += 1
             logging.debug("Waiting 3 seconds before retrying...")

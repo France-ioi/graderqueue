@@ -88,6 +88,41 @@ function get_ssl_client_info($table) {
   }
 }
 
+function auth_graderserver_by_token() {
+  # Authenticate a graderserver from its token
+  global $db;
+
+  if(!isset($_POST['server_token'])) {
+    return NULL;
+  }
+
+  $ip = $_SERVER['REMOTE_ADDR'];
+
+  $stmt = $db->prepare("SELECT * FROM server_tokens WHERE token = :token");
+  $stmt->execute(['token' => $_POST['server_token']]);
+  $tokenData = $stmt->fetch();
+  if(!$tokenData) { return NULL; }
+
+  $stmt = $db->prepare("SELECT * FROM servers WHERE token_id = :tokenId AND ip = :ip");
+  $stmt->execute(['tokenId' => $tokenData['id'], 'ip' => $ip]);
+  $serverData = $stmt->fetch();
+  if($serverData) { return $serverData; }
+
+  # We need to register this server
+  $servdata = [
+    'name' => $tokenData['name'] . '-' . $ip,
+    'token_id' => $tokenData['id'],
+    'ip' => $ip,
+    'wakeup_url' => 'udp://' . $ip . ':20000',
+    'type' => $tokenData['type'],
+    'max_concurrent_jobs' => $tokenData['max_concurrent_jobs']
+    ];
+  $stmt = $db->prepare("INSERT INTO servers (name, token_id, ip, wakeup_url, type, max_concurrent_jobs) VALUES(:name, :token_id, :ip, :wakeup_url, :type, :max_concurrent_jobs)");
+  $stmt->execute($servdata);
+  $servdata['id'] = $db->lastInsertId();
+  return $servdata;
+}
+
 function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondtry = false) {
   # Wake up a server if needed
   # If secondtry is true, we try to wake up any matching server
