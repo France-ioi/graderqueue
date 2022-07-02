@@ -4,6 +4,7 @@
       "phpseclib/phpseclib": "~2.0.0",
       "php": ">=5.4.0",
       "lib-openssl": "*",
-      "lib-curl": "*"
+      "lib-curl": "*",
+      "aws/aws-sdk-php": "^3.225"
    }
 }

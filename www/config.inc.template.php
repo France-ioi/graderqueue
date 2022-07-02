@@ -120,6 +120,20 @@ $CFG_stat_intervals = array(
     )
 );
 
+$CFG_aws_credentials = [
+    'credentials' => [
+        'key' => '',
+        'secret' => ''
+        ],
+    'region' => ''
+    ];
+$CFG_aws_autoscaling_group = '';
+
+$CFG_autoscaling_ratio_burst = 1.3;
+$CFG_autoscaling_ratio_long = 1.6;
+$CFG_autoscaling_minutes_downscale = 30;
+
+
 ### End of configuration
 
 try {

@@ -5,6 +5,8 @@
 
 require_once __DIR__."/../vendor/autoload.php";
 
+use Aws\AutoScaling\AutoScalingClient;
+use Aws\CloudWatch\CloudWatchClient;
 use Jose\Factory\DecrypterFactory;
 use Jose\Factory\VerifierFactory;
 use Jose\Factory\JWKFactory;
@@ -401,4 +403,176 @@ function make_pages_selector($curpage, $nbpages) {
   return $html;
 }
 
+
+function autoscaling_get_client() {
+  global $CFG_aws_credentials, $autoscaling_client;
+  if(!isset($autoscaling_client)) {
+    $autoscaling_client = AutoScalingClient::factory(array_merge($CFG_aws_credentials, ['version' => "2011-01-01"]));
+  }
+  return $autoscaling_client;
+}
+
+function cloudwatch_get_client() {
+  global $CFG_aws_credentials, $cloudwatch_client;
+  if(!isset($cloudwatch_client)) {
+    $cloudwatch_client = CloudWatchClient::factory(array_merge($CFG_aws_credentials, ['version' => "2010-08-01"]));
+  }
+  return $cloudwatch_client;
+}
+
+function autoscaling_get_infos() {
+  global $CFG_aws_autoscaling_group;
+  $client = autoscaling_get_client();
+  $desc = $client->describeAutoScalingGroups(['AutoScalingGroupNames' => [$CFG_aws_autoscaling_group]])['AutoScalingGroups'][0];
+  return [
+    'min' => $desc['MinSize'],
+    'max' => $desc['MaxSize'],
+    'cur' => $desc['DesiredCapacity']
+    ];
+}
+
+function autoscaling_set_desired($new) {
+  global $CFG_aws_autoscaling_group;
+  $client = autoscaling_get_client();
+  //try {
+    $client->setDesiredCapacity([
+      'AutoScalingGroupName' => $CFG_aws_autoscaling_group,
+      'DesiredCapacity' => $new,
+      'HonorCooldown' => true
+      ]);
+  //} catch(Exception $e) {}
+}
+
+function autoscaling_get_instances() {
+  global $CFG_aws_autoscaling_group;
+  $client = autoscaling_get_client();
+  $instances = $client->describeAutoScalingInstances()['AutoScalingInstances'];
+  $ret = [];
+  foreach($instances as $instance) {
+    if($instance['AutoScalingGroupName'] == $CFG_aws_autoscaling_group && $instance['LifecycleState'] == 'InService') {
+      $ret[] = $instance;
+    }
+  }
+  return $ret;
+}
+
+function autoscaling_get_instance_metrics() {
+  global $CFG_aws_autoscaling_group;
+  $client = cloudwatch_get_client();
+  $instances = autoscaling_get_instances();
+  $zones = [];
+  $metricDataQueries = [];
+  foreach($instances as $instance) {
+    $zones[$instance['InstanceId']] = $instance['AvailabilityZone'];
+
+    $metricDataQueries[] = [
+      'Id' => 'credit_' . str_replace('-', '_', $instance['InstanceId']),
+      'MetricStat' => [
+        'Metric' => [
+          'Namespace' => 'AWS/EC2',
+          'MetricName' => 'CPUCreditBalance',
+          'Dimensions' => [
+            [
+              'Name' => 'InstanceId',
+              'Value' => $instance['InstanceId']
+            ]
+          ]
+        ],
+        'Period' => 300,
+        'Stat' => 'Average'
+      ]
+    ];
+    $metricDataQueries[] = [
+      'Id' => 'surplus_' . str_replace('-', '_', $instance['InstanceId']),
+      'MetricStat' => [
+        'Metric' => [
+          'Namespace' => 'AWS/EC2',
+          'MetricName' => 'CPUSurplusCreditBalance',
+          'Dimensions' => [
+            [
+              'Name' => 'InstanceId',
+              'Value' => $instance['InstanceId']
+            ]
+          ]
+        ],
+        'Period' => 300,
+        'Stat' => 'Average'
+      ]
+    ];
+  }
+  $stats = $client->getMetricData([
+    'MetricDataQueries' => $metricDataQueries,
+    'StartTime' => (new DateTime())->sub(new DateInterval('PT300S'))->format('c'),
+    'EndTime' => (new DateTime())->format('c'),
+    'ScanBy' => 'TimestampDescending'
+  ])['MetricDataResults'];
+
+  $ret = [];
+  foreach($stats as $stat) {
+    $type = explode('_', $stat['Id'])[0];
+    $instanceId = str_replace('_', '-', explode('_', $stat['Id'], 2)[1]);
+    if(!isset($ret[$instanceId])) {
+      $ret[$instanceId] = ['instanceId' => $instanceId];
+    }
+    $ret[$instanceId][$type] = isset($stat['Values'][0]) ? $stat['Values'][0] : 1;
+    $ret[$instanceId]['zone'] = $zones[$instanceId];
+  }
+  usort($ret, function($a, $b) {
+    return $a['credit'] - $b['credit'];
+  });
+  return $ret;
+}
+
+function autoscaling_terminate_instances($instanceIds) {
+  global $CFG_aws_autoscaling_group;
+  $client = autoscaling_get_client();
+  foreach($instanceIds as $instanceId) {
+    $client->terminateInstanceInAutoScalingGroup([
+      'InstanceId' => $instanceId,
+      'ShouldDecrementDesiredCapacity' => true
+    ]);
+  }
+}
+
+function autoscaling_get_stoppable($toBeStopped) {
+  $instances = autoscaling_get_instance_metrics();
+  
+  $zoneCounts = [];
+  $stoppableByZone = [];
+  foreach($instances as $instance) {
+    $zone = $instance['zone'];
+    if(!isset($zoneCounts[$zone])) {
+      $zoneCounts[$zone] = 0;
+      $stoppableByZone[$zone] = [];
+    }
+    $zoneCounts[$zone]++;
+    if($instance['surplus'] > 0 || $instance['credit'] < 10) {
+      continue;
+    }
+    $stoppableByZone[$zone][] = $instance['instanceId'];
+  }
+  
+  $stoppable = [];
+  while(count($stoppable) < $toBeStopped) {
+    $maxZone = null;
+    $maxCount = 0;
+    foreach($zoneCounts as $zone => $count) {
+      if($count > $maxCount) {
+        $maxZone = $zone;
+        $maxCount = $count;
+      }
+    }
+    if(!$maxZone) {
+      break;
+    }
+    if(count($stoppableByZone[$maxZone]) > 0) {
+      $stoppable[] = array_shift($stoppableByZone[$maxZone]);
+      $zoneCounts[$maxZone]--;
+    } else {
+      break;
+    }
+  }
+  return $stoppable;
+}
+  
 ?>
