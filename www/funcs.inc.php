@@ -7,13 +7,8 @@ require_once __DIR__."/../vendor/autoload.php";
 
 use Aws\AutoScaling\AutoScalingClient;
 use Aws\CloudWatch\CloudWatchClient;
-use Jose\Factory\DecrypterFactory;
-use Jose\Factory\VerifierFactory;
 use Jose\Factory\JWKFactory;
 use Jose\Loader;
-use Jose\Object\JWKSet;
-use Jose\Factory\EncrypterFactory;
-use Jose\Factory\SignerFactory;
 use Jose\Factory\JWSFactory;
 use Jose\Factory\JWEFactory;
 
@@ -295,17 +290,22 @@ function get_token_client_info() {
   $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
   $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
   try {
-    $jws = Loader::load($_POST['sToken']);
-    $decrypter = DecrypterFactory::createDecrypter(['A256CBC-HS512','RSA-OAEP-256']);
-    $decrypter->decryptUsingKey($jws, $privateKey);
-    $jws = $jws->getPayLoad();
-    $res = Loader::load($jws);
-    $verifier = VerifierFactory::createVerifier(['RS512']);
-    $valid_signature = $verifier->verifyWithKey($res, $publicKey);
-    if ($valid_signature === false) {
-       throw new Exception('Signature cannot be validated, please check your SSL keys');
-    }
-    $params = $res->getPayload();
+    $loader = new Loader();
+
+    $jws = $loader->loadAndDecryptUsingKey(
+        $_POST['sToken'],
+        $privateKey,
+        ['RSA-OAEP-256'],
+        ['A256CBC-HS512'],
+        $recipient_index
+    )->getPayload();
+
+    $params = $loader->loadAndVerifySignatureUsingKey(
+        $jws,
+        $publicKey,
+        ['RS512'],
+        $signature_index
+    )->getPayload();
   } catch (Exception $e) {
     die(jsonerror(2, "Invalid token: ".$e->getMessage()));
   }
@@ -319,26 +319,17 @@ function encode_params_in_token($params, $platform) {
   $publicKey = JWKFactory::createFromKey($platform['public_key'], null, array('kid' => $platform['name']));
   $privateKey = JWKFactory::createFromKey($CFG_private_key, null, array('kid' => $CFG_key_name));
 
-  $jws = JWSFactory::createJWS($params);
-  $signer = SignerFactory::createSigner(['RS512']);
-  $signer->addSignature(
-     $jws,
-     $privateKey,
-     ['alg' => 'RS512']
-  );
-  $jws = $jws->toCompactJSON(0);
+  $jws = JWSFactory::createJWSToCompactJSON($params, $privateKey, ['alg' => 'RS512']);
 
-  $jwe = JWEFactory::createJWE(
-     $jws,
-     [
-        'alg' => 'RSA-OAEP-256',
-        'enc' => 'A256CBC-HS512',
-        'zip' => 'DEF',
-     ]
+  return JWEFactory::createJWEToCompactJSON(
+      $jws,
+      $publicKey,
+      [
+          'alg' => 'RSA-OAEP-256',
+          'enc' => 'A256CBC-HS512',
+          'zip' => 'DEF',
+      ]
   );
-  $encrypter = EncrypterFactory::createEncrypter(['RSA-OAEP-256','A256CBC-HS512']);
-  $encrypter->addRecipient($jwe, $publicKey);
-  return $jwe->toCompactJSON(0);
 }
 
 

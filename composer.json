@@ -1,6 +1,6 @@
 {
    "require": {
-      "spomky-labs/jose": "2.0.*@beta",
+      "spomky-labs/jose": "^6.1",
       "phpseclib/phpseclib": "~2.0.0",
       "php": ">=5.4.0",
       "lib-openssl": "*",
