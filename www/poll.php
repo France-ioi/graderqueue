@@ -51,6 +51,7 @@ while(time() - $start_time < 20) {
 
   # We select a job which can be sent to the server
   $queuelist = $db->prepare("SELECT * FROM `queue`
+JOIN job_types ON job_types.jobid = queue.id
         WHERE sent_to!=:sid
         AND nb_fails<:maxfails
         AND (
@@ -58,8 +59,8 @@ while(time() - $start_time < 20) {
             OR (timeout_time <= NOW() AND
                 (status='sent' OR status='waiting'))
         )
-        AND EXISTS (SELECT 1 FROM job_types WHERE jobid=queue.id AND typeid=:typeid)
-        ORDER BY priority DESC, received_time ASC
+        AND job_types.typeid = :typeid
+        ORDER BY received_time ASC
         LIMIT 1
         FOR UPDATE;");
   $queuelist->execute(array(':sid' => $server_id, ':typeid' => $servdata['type'], ':maxfails' => $CFG_max_fails));

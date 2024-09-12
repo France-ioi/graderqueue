@@ -144,8 +144,8 @@
 
     $stmt = $db->query('
         SELECT
-            SUM(done.cpu_time_ms) as sum_cpu_time_ms,
-            SUM(done.real_time_ms) as sum_real_time_ms,
+            SUM(done.cpu_time_ms) / 10 / ' . $interval['tick'] . ' as sum_cpu_time_ms,
+            SUM(done.real_time_ms) / 10 / ' . $interval['tick'] . ' as sum_real_time_ms,
             AVG(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as avg_waiting_time,
             MAX(TIMESTAMPDIFF(SECOND, done.received_time, done.grading_start_time)) as max_waiting_time
         FROM chart_intervals

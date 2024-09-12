@@ -214,7 +214,7 @@ function wake_up_server_by_error() {
 function wake_up($url) {
   if(($fs = fsockopen($url, -1, $errno, $errstr, 1)) !== False)
   {
-    stream_set_timeout($fs, 1);
+    stream_set_timeout($fs, 2);
     fwrite($fs, 'wakeup');
     $answer = fread($fs, 1024);
     fclose($fs);
@@ -537,7 +537,7 @@ function autoscaling_get_stoppable($toBeStopped) {
       $stoppableByZone[$zone] = [];
     }
     $zoneCounts[$zone]++;
-    if($instance['surplus'] > 0 || $instance['credit'] < 10) {
+    if($instance['surplus'] > 0 || $instance['credit'] < 3) {
       continue;
     }
     $stoppableByZone[$zone][] = $instance['instanceId'];

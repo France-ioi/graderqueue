@@ -87,6 +87,9 @@ CFG_SSL_HOSTNAME = None
 # use urllib2_ssl.match_hostname, else put None
 CFG_SSL_CHECKER = None
 
+# Client token
+CFG_TOKEN = None
+
 # Client SSL files
 CFG_SSL_KEY = ''  # local.key
 CFG_SSL_CERT = '' # local.crt

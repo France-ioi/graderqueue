@@ -24,6 +24,9 @@ if($hourly) {
 
   # Delete orphan job_types
   $db->query("DELETE FROM `job_types` WHERE NOT EXISTS (SELECT 1 FROM `queue` WHERE `job_types`.`jobid`=`queue`.`id`);");
+
+  # Delete old graderqueue servers
+  $db->query("DELETE FROM `servers` WHERE token_id > 0 AND wakeup_fails > 60;");
 }
 
 # Warn about tasks in error / stuck

@@ -165,7 +165,7 @@ if(!isset($request['request'])) {
   if(isset($request['tags'])) {
     $tagids = tags_to_tagids($request['tags']);
   } else {
-    $tagids = array();
+    $tagids = array(1);
   }
 
   # Tasks sent by this platform have a tag automatically added

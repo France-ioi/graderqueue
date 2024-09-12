@@ -99,8 +99,8 @@
             data: {
                 labels: chart_data.labels,
                 datasets: [
-                    { data: chart_data.sum_cpu_time_ms, label: 'CPU time (ms)', fill: false, borderColor: c1 },
-                    { data: chart_data.sum_real_time_ms, label: 'Real time (ms)', fill: false, borderColor: c2 }
+                    { data: chart_data.sum_cpu_time_ms, label: 'Adjusted time (%)', fill: false, borderColor: c1 },
+                    { data: chart_data.sum_real_time_ms, label: 'Actual CPU time (%)', fill: false, borderColor: c2 }
                 ]
             }
         }
