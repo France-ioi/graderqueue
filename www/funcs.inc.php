@@ -126,6 +126,9 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondt
 
   global $db;
 
+  # Try to wake up as many different servers as the queue is long
+  $queueLength = $db->query("SELECT COUNT(`queue`.`id`) FROM `queue` WHERE `status` != 'sent';")->fetchColumn();
+
   $query = "
     SELECT servers.*,
       COUNT(queue.id) AS nbjobs,
@@ -152,13 +155,24 @@ function wake_up_server_by_type($typeids = array(), $strat = 'default', $secondt
     {
       # There's already one server polling which will take this new task
       if($row['last_poll_ago'] < 18 && !$secondtry) {
-        return True;
+        $queueLength--;
+        if($queueLength <= 0) {
+          return True;
+        } else {
+          continue;
+        }
       }
+
       # Need to wake this server up
       if(wake_up($row['wakeup_url'])) {
         $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=0 WHERE id=:sid;");
         $stmt->execute(array(':sid' => $row['id']));
-        return True;
+        $queueLength--;
+        if($queueLength <= 0) {
+          return True;
+        } else {
+          continue;
+        }
       } else {
         $stmt = $db->prepare("UPDATE `servers` SET wakeup_fails=wakeup_fails+1 WHERE id=:sid;");
         $stmt->execute(array(':sid' => $row['id']));
