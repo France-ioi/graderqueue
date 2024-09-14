@@ -75,6 +75,7 @@ CFG_SVN_PASS = ''
 # Wake-up parameters: IP and port to listen on
 CFG_WAKEUP_IP   = '0.0.0.0'
 CFG_WAKEUP_PORT = 20000
+CFG_WAKEUP_TIMEOUT = None
 
 # Server certificate validation files
 # CA to check the certificate against

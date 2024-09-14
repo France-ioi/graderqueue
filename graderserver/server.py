@@ -52,6 +52,21 @@ class WakeupListener(object):
                 logging.info('Received invalid wake-up signal.')
                 sock.sendto(b'no', addr)
 
+    def _timeoutWakeup(self):
+        """Wakes up automatically after a timeout set in the config."""
+        if CFG_WAKEUP_TIMEOUT is None:
+            return
+        
+        while True:
+            wokeup = self.ev.wait(CFG_WAKEUP_TIMEOUT)
+            if not wokeup:
+                logging.info('Woke up after timeout.')
+                self.ev.set()
+
+            # Wait for the event to be cleared
+            while self.ev.is_set():
+                time.sleep(10)
+
 
 def communicateWithTimeout(subProc, timeout=0, input=None):
     """Communicates with subProc until its completion or timeout seconds,
