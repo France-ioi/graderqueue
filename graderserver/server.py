@@ -13,6 +13,7 @@
 import argparse, io, json, logging, os, requests, shutil, signal, socket, ssl
 import sys, subprocess, threading, time, xml.dom.minidom, zipfile
 import urllib.request, urllib.parse, urllib2_ssl
+from string import Template
 from config import *
 
 # subprocess.DEVNULL is only present in python 3.3+.
@@ -274,7 +275,7 @@ class RepositoryHandler(object):
             if rev == 'HEAD':
                 return False
             else:
-                raise Exception("Failure updating task `%s` to revision `%s`, no repository found." % (fold, rev))
+                raise Exception("Failure updating task `%s` to revision `%s`, no repository found." % (folder, rev))
 
         logging.debug("Repository found for folder `%s`, at path `%s`." % (folder, repo['path']))
 
@@ -477,10 +478,10 @@ def testConnection(opener):
     print("Testing connection with the graderqueue at URL `%s`..." % CFG_GRADERQUEUE_TEST)
     jsondata = opener.open(CFG_GRADERQUEUE_TEST)
 
-    logging.debug("Received: %s" % r)
+    logging.debug("Received: %s" % jsondata)
 
     if jsondata is None:
-        print("Error: received invalid JSON data: `%s`.\nTest failed." % r)
+        print("Error: received invalid JSON data: `%s`.\nTest failed." % jsondata)
         return 1
 
     if jsondata['errorcode'] == 0:
@@ -872,7 +873,7 @@ if __name__ == '__main__':
                 if respJson['errorcode'] == 0:
                     break
             else:
-                logging.critical("Error: Taskqueue answered results with invalid data (%s)" % resp)
+                logging.critical("Error: Taskqueue answered results with invalid data (%s)" % respJson)
             respTries += 1
             logging.debug("Waiting 3 seconds before retrying...")
             time.sleep(3)
