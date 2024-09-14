@@ -273,7 +273,7 @@ class RepositoryHandler(object):
 
         return True
 
-    def svnUpdate(self, folder, rev='HEAD'):
+    def svnUpdate(self, folder, rev='HEAD', isRecursive=False):
         """Update a SVN folder to revision 'rev'."""
         foldPath = os.path.realpath(folder.replace('$ROOT_PATH', CFG_GRADERQUEUE_ROOT)) + '/'
         curRepo = None
@@ -335,6 +335,14 @@ class RepositoryHandler(object):
 
                 # Call SVN
                 svnup = subprocess.call(self.svnCmd + ['update', '--parents', '--accept', 'theirs-full', '--force', '-r', rev, foldPath], stdout=DEVNULL, stderr=DEVNULL)
+
+                if not isRecursive:
+                    # Try to update _local_common if it exists
+                    localCommonPath = CFG_GRADERQUEUE_ROOT + '/' + folder.split('/')[1] + '/_local_common/'
+                    try:
+                        self.update(localCommonPath, 'HEAD', True)
+                    except:
+                        pass
 
                 if svnup > 0:
                     # Failure, we return without updating
