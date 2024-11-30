@@ -38,20 +38,12 @@ $stmt->execute(array(':sid' => $server_id));
 $start_time = time();
 
 while(time() - $start_time < 20) {
-  # We use a polling lock so that only one server polls the queue repeatedly
-  $stmt = $db->prepare("SELECT GET_LOCK(:lockname, 10);");
-  $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
-  if($stmt->fetch()[0] != 1) {
-    # We didn't acquire the lock
-    continue;
-  }
-
   # Start a transaction to lock rows
   $db->beginTransaction();
 
   # We select a job which can be sent to the server
   $queuelist = $db->prepare("SELECT * FROM `queue`
-JOIN job_types ON job_types.jobid = queue.id
+        JOIN job_types ON job_types.jobid = queue.id
         WHERE sent_to!=:sid
         AND nb_fails<:maxfails
         AND (
@@ -73,33 +65,34 @@ JOIN job_types ON job_types.jobid = queue.id
       db_log('error_timeout', $row['id'], $row['sent_to'], '');
       $query .= ", nb_fails=nb_fails+1";
     }
-    $query .= " WHERE id=:id;";
+    $query .= " WHERE id=:id AND sent_to=:sentto;";
 
     # We send the job and write down which server we sent it to
     $stmt = $db->prepare($query);
-    if($stmt->execute(array(':sid' => $server_id, ':id' => $row['id']))) {
-      # Output the task information
-      echo json_encode(array('errorcode' => 0,
-            'jobid' => intval($row['id']),
-            'jobname' => $row['name'],
-            'taskrevision' => $row['taskrevision'],
-            'jobdata' => json_decode($row['jobdata'])));
-    } else {
+    if(!$stmt->execute(array(':sid' => $server_id, ':id' => $row['id'], ':sentto' => $row['sent_to']))) {
       echo jsonerror(2, "Failed to update queue, cannot send job.");
+      exit();
+      # Output the task information
     }
-    # We sent something normally (except if we got an error), so we end
-    $db->commit();
-    $stmt = $db->prepare("SELECT RELEASE_LOCK(:lockname);");
-    $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
-    exit();
+    # Check we did get the task
+    $stmt = $db->prepare("SELECT * FROM `queue` WHERE id=:id AND sent_to=:sid;");
+    $stmt->execute(array(':id' => $row['id'], ':sid' => $server_id));
+    if($row = $stmt->fetch()) {
+      echo json_encode(array(
+        'errorcode' => 0,
+        'jobid' => intval($row['id']),
+        'jobname' => $row['name'],
+        'taskrevision' => $row['taskrevision'],
+        'jobdata' => json_decode($row['jobdata']
+      )));
+      # We sent something normally (except if we got an error), so we end
+      $db->commit();
+      exit();
+    }
   }
   # We commit the transaction and release the polling lock
   $db->commit();
-  # We wait 0.5 seconds to throttle database queries for that specific server type
-  # (we didn't have any tasks waiting anyway)
   usleep(500000);
-  $stmt = $db->prepare("SELECT RELEASE_LOCK(:lockname);");
-  $stmt->execute(array(':lockname' => 'queue-poll' . $servdata['type']));
 }
 echo jsonerror(1, "No job available.");
 ?>
