@@ -15,7 +15,7 @@
         }
 
         static function json($json_str) {
-            return '<button class="btn btn-xs btn-info btn-json" onclick="ui.previewJSON(this)">{json}<code>'.$json_str.'</code></button>';
+            return '<button class="btn btn-xs btn-info btn-json" onclick="ui.previewJSON(this)">{json}<code>'.htmlspecialchars($json_str).'</code></button>';
         }
 
         static function expander($caption, $content, $type = '') {
